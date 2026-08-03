@@ -1,0 +1,45 @@
+.DS_Store
+node_modules
+/dist
+/dll
+/sdk/jdaispace-sdk/dist
+# demo 下的 jdaispace.sdk.js 由 build:sdk 从 dist 自动拷贝生成，不入库
+/sdk/jdaispace-sdk/demo/jdaispace.sdk.js
+yarn.lock
+package-lock.json
+
+# local env files
+.env.local
+.env.*.local
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log
+
+# Editor directories and files
+.idea
+# .vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# tests-reports
+tests/**/reports/
+test
+report.*
+test-report.json
+
+*.secret
+*.pub
+.husky/git_commit_to_joycoder.sh
+.husky/post-checkout
+.husky/post-commit
+.joycode/**
+
+# Rust / Cargo 构建产物（Tauri）
+/src-tauri/target
