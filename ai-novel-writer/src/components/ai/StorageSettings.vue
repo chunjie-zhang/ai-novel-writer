@@ -116,7 +116,7 @@ async function handleMigrate() {
 
 .form-hint {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-2);
   margin-top: 4px;
 }
 
@@ -128,7 +128,7 @@ async function handleMigrate() {
 
 .migrate-desc {
   font-size: 13px;
-  color: #606266;
+  color: var(--text-2);
   line-height: 1.5;
 }
 </style>

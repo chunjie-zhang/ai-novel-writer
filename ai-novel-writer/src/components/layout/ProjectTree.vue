@@ -33,7 +33,7 @@
 
     <!-- 项目列表 -->
     <div v-if="projectStore.projects.length === 0" class="empty-state">
-      <el-icon :size="40" color="#c0c4cc"><Icon icon="lucide:folder-open" /></el-icon>
+      <el-icon :size="40" color="var(--text-3)"><Icon icon="lucide:folder-open" /></el-icon>
       <p>暂无项目</p>
       <el-button type="primary" size="small" @click="$emit('createProject')">
         新建项目
@@ -409,6 +409,7 @@ async function handleWorldSave(world: any) {
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: var(--panel-bg);
 }
 
 .tree-header {
@@ -416,7 +417,7 @@ async function handleWorldSave(world: any) {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border);
 }
 
 .tree-header-actions {
@@ -428,9 +429,9 @@ async function handleWorldSave(world: any) {
 
 .tree-header-actions :deep(.el-button) {
   --el-button-bg-color: transparent;
-  --el-button-hover-bg-color: #f0f2f5;
-  --el-button-hover-text-color: #409eff;
-  border-radius: 6px;
+  --el-button-hover-bg-color: var(--panel-hover);
+  --el-button-hover-text-color: var(--accent);
+  border-radius: 8px;
   transition: all 0.2s ease;
   font-size: 15px;
   width: 28px;
@@ -440,30 +441,30 @@ async function handleWorldSave(world: any) {
 
 .tree-header-actions :deep(.el-button:hover) {
   transform: scale(1.1);
-  background: #f0f2f5;
+  background: var(--panel-hover);
 }
 
 .tree-header-actions :deep(.el-button.is-active),
 .tree-header-actions :deep(.el-button:active) {
-  background: #ecf5ff;
-  color: #409eff;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .tree-header-actions .more-btn {
-  border: 1px dashed #d9d9d9;
+  border: 1px dashed var(--border-light);
   border-radius: 6px;
   opacity: 0.7;
 }
 
 .tree-header-actions .more-btn:hover {
   opacity: 1;
-  border-color: #409eff;
+  border-color: var(--accent);
 }
 
 .tree-title {
   font-size: 14px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-1);
 }
 
 /* 下拉菜单美化 */
@@ -474,25 +475,26 @@ async function handleWorldSave(world: any) {
   padding: 8px 16px;
   font-size: 13px;
   transition: all 0.15s;
+  color: var(--text-2);
 }
 
 .tree-dropdown-menu :deep(.el-dropdown-menu__item .el-icon) {
   font-size: 16px;
-  color: #606266;
+  color: var(--text-2);
 }
 
 .tree-dropdown-menu :deep(.el-dropdown-menu__item:hover) {
-  background: #ecf5ff;
-  color: #409eff;
+  background: var(--panel-hover);
+  color: var(--text-1);
 }
 
 .tree-dropdown-menu :deep(.el-dropdown-menu__item:hover .el-icon) {
-  color: #409eff;
+  color: var(--accent);
 }
 
 .outline-section {
-  border-bottom: 1px solid #f0f0f0;
-  background: #fafbfc;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg-2);
 }
 
 .empty-state {
@@ -500,17 +502,33 @@ async function handleWorldSave(world: any) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: 48px 20px;
   gap: 12px;
-  color: #909399;
+  color: var(--text-2);
 }
 
 .empty-state p {
   font-size: 13px;
+  color: var(--text-2);
 }
 
 .tree-menu {
   border-right: none;
+  background: transparent;
+}
+
+/* 章节节点文字 */
+.tree-menu :deep(.el-menu-item) {
+  color: var(--text-2);
+}
+
+.tree-menu :deep(.el-menu-item.is-active) {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tree-menu :deep(.el-menu-item:hover) {
+  background: var(--panel-hover);
 }
 
 .project-node {
@@ -524,17 +542,17 @@ async function handleWorldSave(world: any) {
 
 /* 选中的小说：标题行整体高亮背景 + 左侧指示条 + 加粗蓝字 */
 .tree-menu .el-sub-menu.proj-active > .el-sub-menu__title {
-  background-color: #ecf5ff !important;
-  color: #409eff !important;
+  background-color: var(--accent-soft) !important;
+  color: var(--accent) !important;
 }
 
 .project-node.active {
-  color: #409eff;
+  color: var(--accent);
   font-weight: 600;
 }
 
 .project-node.active .node-name {
-  color: #409eff;
+  color: var(--accent);
 }
 
 .project-node.active::before {
@@ -545,7 +563,7 @@ async function handleWorldSave(world: any) {
   bottom: 3px;
   width: 3px;
   border-radius: 2px;
-  background: #409eff;
+  background: var(--accent);
 }
 
 .node-name {
@@ -558,7 +576,7 @@ async function handleWorldSave(world: any) {
 
 .node-date {
   font-size: 11px;
-  color: #c0c4cc;
+  color: var(--text-3);
 }
 
 /* 项目节点上的「迁移位置」按钮：始终显示，hover 变蓝 */
@@ -566,7 +584,7 @@ async function handleWorldSave(world: any) {
   width: 22px;
   height: 22px;
   padding: 0;
-  color: #c0c4cc;
+  color: var(--text-3);
   margin-left: 2px;
   flex-shrink: 0;
   transition: color 0.15s, background 0.15s;
@@ -574,8 +592,8 @@ async function handleWorldSave(world: any) {
 }
 
 .node-move-btn:hover {
-  color: #409eff !important;
-  background: #ecf5ff !important;
+  color: var(--accent) !important;
+  background: var(--accent-soft) !important;
 }
 
 /* 项目节点上的「删除」按钮 */
@@ -583,7 +601,7 @@ async function handleWorldSave(world: any) {
   width: 22px;
   height: 22px;
   padding: 0;
-  color: #c0c4cc;
+  color: var(--text-3);
   margin-left: 2px;
   flex-shrink: 0;
   transition: color 0.15s, background 0.15s;
@@ -591,8 +609,8 @@ async function handleWorldSave(world: any) {
 }
 
 .node-del-btn:hover {
-  color: #f56c6c !important;
-  background: #fef0f0 !important;
+  color: var(--red) !important;
+  background: var(--red-soft) !important;
 }
 
 .chapter-name {
@@ -601,10 +619,11 @@ async function handleWorldSave(world: any) {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
+  color: var(--text-2);
 }
 
 .chapter-words {
   font-size: 11px;
-  color: #c0c4cc;
+  color: var(--text-3);
 }
 </style>

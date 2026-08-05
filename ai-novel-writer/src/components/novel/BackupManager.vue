@@ -209,6 +209,7 @@ onUnmounted(() => {
 .bm-header h3 {
   font-size: 14px;
   font-weight: 600;
+  color: var(--text-1);
 }
 
 .bm-header-actions {
@@ -218,21 +219,16 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 
-.bm-header h3 {
-  font-size: 14px;
-  font-weight: 600;
-}
-
 .bm-empty {
   text-align: center;
   padding: 30px 20px;
-  color: #909399;
+  color: var(--text-2);
 }
 
 .bm-hint {
   font-size: 12px;
   margin-top: 4px;
-  color: #c0c4cc;
+  color: var(--text-3);
 }
 
 .bm-list {
@@ -246,8 +242,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  border: 1px solid #e4e7ed;
-  border-radius: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
 .bm-info {
@@ -259,11 +255,12 @@ onUnmounted(() => {
 .bm-name {
   font-size: 13px;
   font-weight: 500;
+  color: var(--text-1);
 }
 
 .bm-time {
   font-size: 11px;
-  color: #909399;
+  color: var(--text-2);
 }
 
 .bm-actions {

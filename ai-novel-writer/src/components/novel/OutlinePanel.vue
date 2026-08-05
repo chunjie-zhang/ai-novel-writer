@@ -217,6 +217,7 @@ if (saved) {
 .op-title {
   font-size: 14px;
   font-weight: 600;
+  color: var(--text-1);
 }
 
 .op-actions {
@@ -227,7 +228,7 @@ if (saved) {
 .op-empty {
   text-align: center;
   padding: 40px 20px;
-  color: #909399;
+  color: var(--text-2);
   font-size: 13px;
 }
 
@@ -239,12 +240,12 @@ if (saved) {
 
 .tree-node {
   padding: 6px 8px;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: background 0.15s;
 }
 
 .tree-node:hover {
-  background: #f5f7fa;
+  background: var(--panel-hover);
 }
 
 .node-content {
@@ -258,7 +259,7 @@ if (saved) {
 
 .node-collapse {
   font-size: 10px;
-  color: #909399;
+  color: var(--text-3);
   width: 12px;
   text-align: center;
 }
@@ -270,7 +271,7 @@ if (saved) {
 
 .node-title {
   font-size: 13px;
-  color: #303133;
+  color: var(--text-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -286,8 +287,8 @@ if (saved) {
   align-items: center;
   justify-content: space-between;
   margin-top: 4px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
 }
 
 .volume-node .node-title {
@@ -303,12 +304,12 @@ if (saved) {
 
 .node-words {
   font-size: 11px;
-  color: #c0c4cc;
+  color: var(--text-3);
 }
 
 .chapter-list {
   margin-left: 24px;
-  border-left: 2px solid #e4e7ed;
+  border-left: 2px solid var(--border-light);
   padding-left: 8px;
 }
 
@@ -323,14 +324,14 @@ if (saved) {
 }
 
 .chapter-node.linked {
-  background: #ecf5ff;
-  border-radius: 4px;
+  background: var(--accent-soft);
+  border-radius: 6px;
 }
 
 .node-link-badge {
   font-size: 10px;
-  color: #409eff;
-  background: #ecf5ff;
+  color: var(--accent);
+  background: var(--accent-soft);
   padding: 0 6px;
   border-radius: 4px;
   margin-left: 6px;

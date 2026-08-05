@@ -240,11 +240,12 @@ async function handleTest() {
 .label-title {
   font-size: 14px;
   font-weight: 500;
+  color: var(--text-1);
 }
 
 .label-desc {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-2);
 }
 
 .slider-with-value {
@@ -259,12 +260,12 @@ async function handleTest() {
   text-align: center;
   font-size: 14px;
   font-weight: 500;
-  color: #409eff;
+  color: var(--accent);
 }
 
 .slider-hint {
   font-size: 12px;
-  color: #c0c4cc;
+  color: var(--text-3);
   margin-top: 4px;
 }
 
@@ -273,7 +274,7 @@ async function handleTest() {
   align-items: center;
   justify-content: space-between;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border);
   margin-top: 16px;
 }
 
@@ -294,20 +295,21 @@ async function handleTest() {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
+  background: var(--panel-bg-2);
 }
 
 .scene-card:hover {
-  border-color: #409eff;
-  background: #f5f7fa;
+  border-color: var(--accent);
+  background: var(--panel-hover);
 }
 
 .scene-card.active {
-  border-color: #409eff;
-  background: #ecf5ff;
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .scene-emoji {
@@ -324,12 +326,12 @@ async function handleTest() {
 .scene-label {
   font-size: 12px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-1);
 }
 
 .scene-desc {
   font-size: 11px;
-  color: #909399;
+  color: var(--text-2);
   line-height: 1.3;
 }
 
@@ -339,12 +341,13 @@ async function handleTest() {
   gap: 8px;
   margin-top: 8px;
   padding: 6px 10px;
-  background: #f0f9eb;
-  border-radius: 6px;
+  background: var(--green-soft);
+  border: 1px solid rgba(70, 208, 127, 0.25);
+  border-radius: 8px;
 }
 
 .scene-params {
   font-size: 11px;
-  color: #909399;
+  color: var(--text-2);
 }
 </style>

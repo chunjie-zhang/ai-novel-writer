@@ -155,24 +155,24 @@ async function handleAdjust() {
 <style scoped>
 .diff-dialog { display: flex; flex-direction: column; gap: 16px; }
 .diff-input { display: flex; gap: 8px; align-items: center; }
-.diff-select { text-align: center; padding: 40px; color: #909399; }
-.diff-hint { font-size: 12px; color: #c0c4cc; margin-top: 8px; }
+.diff-select { text-align: center; padding: 40px; color: var(--text-2); }
+.diff-hint { font-size: 12px; color: var(--text-3); margin-top: 8px; }
 .diff-compare { display: flex; flex-direction: column; gap: 12px; }
 .diff-header { display: flex; align-items: center; justify-content: space-between; }
 .diff-status { font-size: 12px; padding: 2px 8px; border-radius: 4px; }
-.diff-status.pending { background: #fdf6ec; color: #e6a23c; }
-.diff-status.accepted { background: #f0f9eb; color: #67c23a; }
-.diff-status.rejected { background: #fef0f0; color: #f56c6c; }
-.diff-status.adjusted { background: #ecf5ff; color: #409eff; }
+.diff-status.pending { background: var(--orange-soft); color: var(--orange); }
+.diff-status.accepted { background: var(--green-soft); color: var(--green); }
+.diff-status.rejected { background: var(--red-soft); color: var(--red); }
+.diff-status.adjusted { background: var(--accent-soft); color: var(--accent); }
 .diff-actions { display: flex; gap: 4px; }
 .diff-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.diff-panel { border: 1px solid #e4e7ed; border-radius: 6px; padding: 12px; max-height: 300px; overflow-y: auto; }
-.diff-panel h5 { margin: 0 0 8px; font-size: 12px; color: #909399; }
-.diff-panel pre { font-size: 12px; line-height: 1.6; white-space: pre-wrap; margin: 0; color: #303133; }
-.diff-panel.original pre { color: #909399; }
-.diff-history { border-top: 1px solid #e4e7ed; padding-top: 12px; }
-.diff-history h5 { font-size: 12px; color: #909399; margin-bottom: 8px; }
+.diff-panel { border: 1px solid var(--border); border-radius: 8px; padding: 12px; max-height: 300px; overflow-y: auto; background: var(--panel-bg-2); }
+.diff-panel h5 { margin: 0 0 8px; font-size: 12px; color: var(--text-2); }
+.diff-panel pre { font-size: 12px; line-height: 1.6; white-space: pre-wrap; margin: 0; color: var(--text-1); }
+.diff-panel.original pre { color: var(--text-2); }
+.diff-history { border-top: 1px solid var(--border); padding-top: 12px; }
+.diff-history h5 { font-size: 12px; color: var(--text-2); margin-bottom: 8px; }
 .history-item { margin-bottom: 8px; }
-.history-index { font-size: 11px; color: #409eff; }
-.history-item pre { font-size: 12px; background: #f5f7fa; padding: 8px; border-radius: 4px; white-space: pre-wrap; margin: 4px 0 0; }
+.history-index { font-size: 11px; color: var(--accent); }
+.history-item pre { font-size: 12px; background: var(--panel-bg-2); border: 1px solid var(--border); padding: 8px; border-radius: 6px; white-space: pre-wrap; margin: 4px 0 0; }
 </style>

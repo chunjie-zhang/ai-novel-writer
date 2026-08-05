@@ -160,26 +160,27 @@ async function handleSave() {
   max-width: 200px;
   max-height: 280px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
 }
 
 .cover-placeholder {
   width: 200px;
   height: 280px;
-  border: 2px dashed #d9d9d9;
+  border: 2px dashed var(--border-light);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #909399;
+  color: var(--text-2);
   cursor: pointer;
   transition: all 0.2s;
+  background: var(--panel-bg-2);
 }
 
 .cover-placeholder:hover {
-  border-color: #409eff;
-  color: #409eff;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 </style>

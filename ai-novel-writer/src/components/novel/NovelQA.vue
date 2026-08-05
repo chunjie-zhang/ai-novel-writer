@@ -116,35 +116,37 @@ async function openSource(s: QAResult["sources"][number]) {
 
 <style scoped>
 .qa-tip {
-  background: #f5f7fa;
-  border-radius: 8px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   padding: 12px 14px;
   margin-bottom: 12px;
   font-size: 13px;
-  color: #606266;
+  color: var(--text-2);
   line-height: 1.6;
 }
 .qa-index {
   font-size: 12px;
-  color: #67c23a;
+  color: var(--green);
   display: flex;
   align-items: center;
   gap: 6px;
   margin-top: 6px;
 }
 .qa-index.warn {
-  color: #e6a23c;
+  color: var(--orange);
 }
 .qa-result {
   margin-bottom: 12px;
 }
 .qa-answer {
-  background: #f0f9eb;
-  border-radius: 8px;
+  background: var(--green-soft);
+  border: 1px solid rgba(70, 208, 127, 0.25);
+  border-radius: 10px;
   padding: 14px 16px;
   font-size: 13px;
   line-height: 1.7;
-  color: #303133;
+  color: var(--text-1);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 260px;
@@ -153,7 +155,7 @@ async function openSource(s: QAResult["sources"][number]) {
 }
 .qa-sources h4 {
   font-size: 13px;
-  color: #606266;
+  color: var(--text-2);
   margin: 0 0 8px;
 }
 .qa-source {
@@ -161,23 +163,24 @@ async function openSource(s: QAResult["sources"][number]) {
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border-radius: 6px;
-  background: #f5f7fa;
+  border-radius: 8px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.15s;
   margin-bottom: 6px;
 }
 .qa-source:hover {
-  background: #ecf5ff;
+  background: var(--panel-hover);
 }
 .qa-source-title {
   font-size: 13px;
-  color: #409eff;
+  color: var(--accent);
   flex-shrink: 0;
 }
 .qa-source-snippet {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

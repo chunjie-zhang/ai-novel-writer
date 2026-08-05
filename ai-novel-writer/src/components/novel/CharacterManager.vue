@@ -245,12 +245,13 @@ async function generateByAI() {
 .cm-header h3 {
   font-size: 16px;
   font-weight: 600;
+  color: var(--text-1);
 }
 
 .cm-empty {
   text-align: center;
   padding: 40px 20px;
-  color: #909399;
+  color: var(--text-2);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -268,20 +269,20 @@ async function generateByAI() {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 .character-card:hover {
-  background: #f5f7fa;
+  background: var(--panel-hover);
 }
 
 .char-avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #409eff;
+  background: linear-gradient(135deg, var(--accent), #3a6fce);
   color: #fff;
   display: flex;
   align-items: center;
@@ -299,12 +300,12 @@ async function generateByAI() {
 .char-name {
   font-size: 14px;
   font-weight: 500;
-  color: #303133;
+  color: var(--text-1);
 }
 
 .char-brief {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -315,7 +316,7 @@ async function generateByAI() {
   width: 26px;
   height: 26px;
   padding: 0;
-  color: #c0c4cc;
+  color: var(--text-3);
   flex-shrink: 0;
   opacity: 0;
   transition: opacity 0.15s, color 0.15s;
@@ -326,7 +327,7 @@ async function generateByAI() {
 }
 
 .char-delete-btn:hover {
-  color: #f56c6c !important;
-  background: #fef0f0 !important;
+  color: var(--red) !important;
+  background: var(--red-soft) !important;
 }
 </style>

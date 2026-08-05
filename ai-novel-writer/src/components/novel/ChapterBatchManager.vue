@@ -262,24 +262,24 @@ async function moveDown(ch: ChapterInfo) {
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border: 1px solid #e4e7ed;
-  border-radius: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .bm-item:hover {
-  background: #f5f7fa;
+  background: var(--panel-hover);
 }
 
 .bm-item.selected {
-  background: #ecf5ff;
-  border-color: #d9ecff;
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .bm-order {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-2);
   min-width: 24px;
   text-align: center;
 }
@@ -297,13 +297,13 @@ async function moveDown(ch: ChapterInfo) {
 }
 
 .bm-title-input :deep(.el-input__inner):focus {
-  border: 1px solid #409eff;
-  background: #fff;
+  border: 1px solid var(--accent);
+  background: var(--panel-bg-2);
 }
 
 .bm-words {
   font-size: 11px;
-  color: #c0c4cc;
+  color: var(--text-3);
   white-space: nowrap;
   min-width: 40px;
   text-align: right;

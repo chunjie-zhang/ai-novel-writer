@@ -272,51 +272,55 @@ function formatTime(t?: string) {
   align-items: center;
   gap: 12px;
   padding: 40px 20px;
-  border: 2px dashed #dcdfe6;
-  border-radius: 12px;
+  border: 2px dashed var(--border-light);
+  border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s;
+  background: var(--panel-bg-2);
 }
 
 .upload-zone:hover {
-  border-color: #409eff;
-  background: #f5f7fa;
+  border-color: var(--accent);
+  background: var(--panel-hover);
 }
 
 .upload-text {
   font-size: 15px;
   font-weight: 500;
-  color: #303133;
+  color: var(--text-1);
 }
 
 .upload-hint {
   font-size: 12px;
-  color: #c0c4cc;
+  color: var(--text-3);
 }
 
 .import-tips {
   margin-top: 16px;
   padding: 12px 16px;
-  background: #f5f7fa;
-  border-radius: 8px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
 
 .import-tips h4 {
   font-size: 13px;
   margin-bottom: 8px;
+  color: var(--text-1);
 }
 
 .import-tips ul {
   font-size: 12px;
-  color: #606266;
+  color: var(--text-2);
   line-height: 1.8;
   padding-left: 16px;
 }
 
 .import-tips code {
-  background: #e8eaed;
+  background: var(--panel-hover);
+  color: #e0b78a;
   padding: 1px 4px;
-  border-radius: 2px;
+  border-radius: 4px;
   font-size: 11px;
 }
 
@@ -325,18 +329,20 @@ function formatTime(t?: string) {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: #f0f9eb;
-  border-radius: 8px;
+  background: var(--green-soft);
+  border: 1px solid rgba(70, 208, 127, 0.25);
+  border-radius: 10px;
 }
 
 .import-info h4 {
   font-size: 14px;
   margin-bottom: 2px;
+  color: var(--text-1);
 }
 
 .import-info p {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-2);
 }
 
 .sample-section {
@@ -346,11 +352,12 @@ function formatTime(t?: string) {
 .sample-section h4 {
   font-size: 13px;
   margin-bottom: 4px;
+  color: var(--text-1);
 }
 
 .sample-hint {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-2);
   margin-bottom: 12px;
 }
 
@@ -368,7 +375,7 @@ function formatTime(t?: string) {
   align-items: center;
   gap: 12px;
   padding: 60px 20px;
-  color: #909399;
+  color: var(--text-2);
 }
 
 .is-loading {
@@ -387,16 +394,17 @@ function formatTime(t?: string) {
 .analysis-summary h4 {
   font-size: 13px;
   margin-bottom: 6px;
-  color: #606266;
+  color: var(--text-2);
 }
 
 .analysis-summary p {
   font-size: 14px;
   line-height: 1.6;
-  color: #303133;
+  color: var(--text-1);
   padding: 8px 12px;
-  background: #f5f7fa;
-  border-radius: 6px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
 .analysis-grid {
@@ -414,13 +422,13 @@ function formatTime(t?: string) {
 
 .ai-label {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-2);
   font-weight: 500;
 }
 
 .ai-value {
   font-size: 13px;
-  color: #303133;
+  color: var(--text-1);
 }
 
 .ai-tags {
@@ -436,7 +444,7 @@ function formatTime(t?: string) {
 .analysis-section h4 {
   font-size: 13px;
   margin-bottom: 8px;
-  color: #606266;
+  color: var(--text-2);
 }
 
 .char-list {
@@ -450,24 +458,25 @@ function formatTime(t?: string) {
   gap: 8px;
   align-items: center;
   padding: 6px 10px;
-  background: #f5f7fa;
-  border-radius: 6px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   font-size: 13px;
 }
 
 .char-name {
   font-weight: 600;
-  color: #409eff;
+  color: var(--accent);
   min-width: 60px;
 }
 
 .char-role {
-  color: #909399;
+  color: var(--text-2);
   min-width: 80px;
 }
 
 .char-traits {
-  color: #606266;
+  color: var(--text-2);
 }
 
 .imitable-list {
@@ -479,7 +488,7 @@ function formatTime(t?: string) {
 .mode-section h4 {
   font-size: 13px;
   margin-bottom: 12px;
-  color: #606266;
+  color: var(--text-2);
 }
 
 .mode-options {
@@ -493,20 +502,21 @@ function formatTime(t?: string) {
   flex-direction: column;
   gap: 4px;
   padding: 12px;
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
+  background: var(--panel-bg-2);
 }
 
 .mode-card:hover {
-  border-color: #409eff;
-  background: #f5f7fa;
+  border-color: var(--accent);
+  background: var(--panel-hover);
 }
 
 .mode-card.active {
-  border-color: #409eff;
-  background: #ecf5ff;
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .mode-emoji {
@@ -516,12 +526,12 @@ function formatTime(t?: string) {
 .mode-label {
   font-size: 13px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-1);
 }
 
 .mode-desc {
   font-size: 11px;
-  color: #909399;
+  color: var(--text-2);
   line-height: 1.4;
 }
 

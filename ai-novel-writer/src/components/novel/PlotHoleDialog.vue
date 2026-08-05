@@ -102,14 +102,14 @@ function tagType(t: string) {
 <style scoped>
 .plot-hole { display: flex; flex-direction: column; gap: 12px; }
 .ph-add { display: flex; gap: 8px; }
-.ph-summary { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #606266; }
+.ph-summary { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--text-2); }
 .ph-list { display: flex; flex-direction: column; gap: 4px; max-height: 360px; overflow-y: auto; }
-.ph-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid #e4e7ed; border-radius: 6px; }
-.ph-item.resolved { opacity: 0.5; background: #f5f7fa; }
+.ph-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }
+.ph-item.resolved { opacity: 0.5; background: var(--panel-bg-2); }
 .ph-left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
 .ph-info { display: flex; flex-direction: column; min-width: 0; }
-.ph-title { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ph-chapter { font-size: 11px; color: #c0c4cc; }
+.ph-title { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-1); }
+.ph-chapter { font-size: 11px; color: var(--text-3); }
 .ph-actions { display: flex; gap: 4px; flex-shrink: 0; }
-.ph-empty { text-align: center; padding: 30px; color: #c0c4cc; font-size: 13px; }
+.ph-empty { text-align: center; padding: 30px; color: var(--text-3); font-size: 13px; }
 </style>

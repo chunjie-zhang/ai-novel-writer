@@ -106,24 +106,25 @@ async function handleTrim() {
   overflow-y: auto;
 }
 .dd-summary {
-  background: #f5f7fa;
-  border-radius: 8px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   padding: 10px 14px;
   margin-bottom: 12px;
 }
 .dd-summary p {
   font-size: 13px;
-  color: #303133;
+  color: var(--text-1);
 }
 .dd-summary .dd-hint {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-2);
   margin-top: 4px;
 }
 h4 {
   font-size: 13px;
   margin: 12px 0 8px;
-  color: #606266;
+  color: var(--text-2);
 }
 .dd-list {
   display: flex;
@@ -134,14 +135,15 @@ h4 {
   display: flex;
   gap: 8px;
   align-items: flex-start;
-  background: #fdf6ec;
-  border-radius: 6px;
+  background: var(--orange-soft);
+  border: 1px solid rgba(232, 162, 58, 0.2);
+  border-radius: 8px;
   padding: 6px 10px;
 }
 .dd-count {
   flex-shrink: 0;
   font-size: 11px;
-  background: #e6a23c;
+  background: var(--orange);
   color: #fff;
   border-radius: 4px;
   padding: 0 6px;
@@ -149,7 +151,7 @@ h4 {
 }
 .dd-text {
   font-size: 12px;
-  color: #606266;
+  color: var(--text-2);
   line-height: 1.5;
   word-break: break-all;
 }

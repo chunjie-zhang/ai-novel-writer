@@ -99,13 +99,13 @@ function highlightText(text: string): string {
 <style scoped>
 .search-dialog { display: flex; flex-direction: column; gap: 12px; }
 .search-bar { flex-shrink: 0; }
-.search-loading { text-align: center; padding: 30px; color: #909399; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.search-empty { text-align: center; padding: 30px; color: #909399; }
+.search-loading { text-align: center; padding: 30px; color: var(--text-2); display: flex; align-items: center; justify-content: center; gap: 8px; }
+.search-empty { text-align: center; padding: 30px; color: var(--text-2); }
 .search-results { max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-.result-item { padding: 10px 12px; border: 1px solid #e4e7ed; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
-.result-item:hover { background: #f5f7fa; }
+.result-item { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+.result-item:hover { background: var(--panel-hover); }
 .result-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
-.result-chapter { font-size: 13px; font-weight: 600; color: #303133; }
-.result-line { font-size: 11px; color: #909399; }
-.result-preview { font-size: 12px; color: #606266; line-height: 1.6; }
+.result-chapter { font-size: 13px; font-weight: 600; color: var(--text-1); }
+.result-line { font-size: 11px; color: var(--text-2); }
+.result-preview { font-size: 12px; color: var(--text-2); line-height: 1.6; }
 </style>

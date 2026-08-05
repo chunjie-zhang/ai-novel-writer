@@ -94,13 +94,14 @@ function levelLabel(level: string): string {
 .rc-score-num {
   font-size: 14px;
   margin-bottom: 6px;
+  color: var(--text-1);
 }
 .rc-score-num b {
   font-size: 20px;
 }
 .rc-summary {
   font-size: 13px;
-  color: #909399;
+  color: var(--text-2);
   line-height: 1.5;
 }
 .rc-stats {
@@ -110,20 +111,21 @@ function levelLabel(level: string): string {
   margin-bottom: 16px;
 }
 .rc-stat {
-  background: #f5f7fa;
-  border-radius: 6px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   padding: 8px 4px;
   text-align: center;
 }
 .rc-stat span {
   display: block;
   font-size: 11px;
-  color: #909399;
+  color: var(--text-2);
   margin-bottom: 2px;
 }
 .rc-stat b {
   font-size: 14px;
-  color: #303133;
+  color: var(--text-1);
 }
 .rc-issues {
   display: flex;
@@ -137,20 +139,21 @@ function levelLabel(level: string): string {
   gap: 10px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: #f5f7fa;
-  border-left: 3px solid #909399;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-3);
 }
 .rc-issue.warn {
-  border-left-color: #e6a23c;
-  background: #fdf6ec;
+  border-left-color: var(--orange);
+  background: var(--orange-soft);
 }
 .rc-issue.danger {
-  border-left-color: #f56c6c;
-  background: #fef0f0;
+  border-left-color: var(--red);
+  background: var(--red-soft);
 }
 .rc-issue.info {
-  border-left-color: #67c23a;
-  background: #f0f9eb;
+  border-left-color: var(--green);
+  background: var(--green-soft);
 }
 .rc-tag {
   flex-shrink: 0;
@@ -159,17 +162,17 @@ function levelLabel(level: string): string {
   padding: 0 8px;
   border-radius: 4px;
   font-size: 11px;
-  background: #909399;
+  background: var(--text-3);
   color: #fff;
 }
 .rc-tag.warn {
-  background: #e6a23c;
+  background: var(--orange);
 }
 .rc-tag.danger {
-  background: #f56c6c;
+  background: var(--red);
 }
 .rc-tag.info {
-  background: #67c23a;
+  background: var(--green);
 }
 .rc-issue-body {
   flex: 1;
@@ -178,12 +181,12 @@ function levelLabel(level: string): string {
 .rc-title {
   font-size: 13px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-1);
   margin-bottom: 2px;
 }
 .rc-desc {
   font-size: 12px;
-  color: #606266;
+  color: var(--text-2);
   line-height: 1.5;
 }
 </style>

@@ -75,7 +75,8 @@ onBeforeUnmount(() => {
 .milkdown-editor {
   height: 100%;
   overflow-y: auto;
-  padding: 24px 40px;
+  padding: 28px 40px;
+  background: var(--panel-bg);
 }
 
 .editor-loading {
@@ -83,16 +84,16 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #c0c4cc;
+  color: var(--text-3);
   font-size: 14px;
 }
 
-/* Milkdown 编辑器样式覆盖 */
+/* Milkdown 编辑器样式覆盖（深色阅读） */
 :deep(.milkdown) {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: 16px;
-  line-height: 1.8;
-  color: #303133;
+  line-height: 1.85;
+  color: var(--text-1);
   max-width: 720px;
   margin: 0 auto;
 }
@@ -100,20 +101,23 @@ onBeforeUnmount(() => {
 :deep(.milkdown h1) {
   font-size: 1.8em;
   margin-bottom: 0.5em;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
   padding-bottom: 0.3em;
+  color: var(--text-1);
 }
 
 :deep(.milkdown h2) {
   font-size: 1.4em;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
+  color: var(--text-1);
 }
 
 :deep(.milkdown h3) {
   font-size: 1.2em;
   margin-top: 1.2em;
   margin-bottom: 0.4em;
+  color: var(--text-1);
 }
 
 :deep(.milkdown p) {
@@ -122,23 +126,35 @@ onBeforeUnmount(() => {
 }
 
 :deep(.milkdown blockquote) {
-  border-left: 3px solid #409eff;
+  border-left: 3px solid var(--accent);
   padding-left: 1em;
-  color: #606266;
+  color: var(--text-2);
   font-style: italic;
 }
 
 :deep(.milkdown pre) {
-  background: #f5f7fa;
-  border-radius: 6px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   padding: 12px 16px;
   overflow-x: auto;
+  color: var(--text-1);
 }
 
 :deep(.milkdown code) {
-  background: #f5f7fa;
+  background: var(--panel-bg-2);
+  color: #e0b78a;
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 0.9em;
+}
+
+/* 光标与选区在深色下可见 */
+:deep(.milkdown .ProseMirror-selectednode) {
+  outline: 1px solid var(--accent);
+}
+
+:deep(.milkdown ::selection) {
+  background: var(--accent-soft);
 }
 </style>

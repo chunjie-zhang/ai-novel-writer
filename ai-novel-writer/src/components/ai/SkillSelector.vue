@@ -128,9 +128,9 @@ const skillStore = useSkillStore();
 .ss-group-label {
   font-size: 12px;
   font-weight: 600;
-  color: #909399;
+  color: var(--text-2);
   padding: 8px 8px 4px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border);
   margin-top: 4px;
 }
 
@@ -144,12 +144,12 @@ const skillStore = useSkillStore();
 }
 
 .ss-item:hover {
-  background: #f5f7fa;
+  background: var(--panel-hover);
 }
 
 .ss-item.active {
-  background: #ecf5ff;
-  border: 1px solid #d9ecff;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
 }
 
 .ss-item-icon {
@@ -167,13 +167,13 @@ const skillStore = useSkillStore();
 .ss-item-name {
   font-size: 13px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-1);
   margin-bottom: 2px;
 }
 
 .ss-item-desc {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-2);
   line-height: 1.4;
   margin-bottom: 4px;
 }

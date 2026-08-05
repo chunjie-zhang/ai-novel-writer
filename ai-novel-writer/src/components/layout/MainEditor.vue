@@ -133,7 +133,7 @@
       <div class="editor-body">
         <!-- 无章节时的提示 -->
         <div v-if="!editorStore.currentChapter" class="no-chapter-hint">
-          <el-icon :size="48" color="#c0c4cc"><Icon icon="lucide:pen-line" /></el-icon>
+          <el-icon :size="48" color="var(--text-3)"><Icon icon="lucide:pen-line" /></el-icon>
           <p>请在左侧选择一个章节，或新建一个章节开始写作</p>
           <el-button type="primary" @click="handleNewChapter">新建章节</el-button>
         </div>
@@ -200,16 +200,16 @@
           <el-input-number v-model="goalTarget" :min="500" :max="50000" :step="500" style="width: 160px" />
         </el-form-item>
         <el-form-item label="今日已写">
-          <span style="font-size: 16px; font-weight: 600; color: #409eff;">
+          <span style="font-size: 16px; font-weight: 600; color: var(--accent);">
             {{ writingStore.stats.writtenToday }}
           </span>
-          <span style="color: #909399; margin-left: 8px;">字</span>
+          <span style="color: var(--text-3); margin-left: 8px;">字</span>
         </el-form-item>
         <el-form-item label="累计总字数">
           <span style="font-size: 16px; font-weight: 600;">
             {{ writingStore.stats.totalWrittenAllTime }}
           </span>
-          <span style="color: #909399; margin-left: 8px;">字</span>
+          <span style="color: var(--text-3); margin-left: 8px;">字</span>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -565,61 +565,81 @@ function createNewProject() {
   display: flex;
   flex-direction: column;
   position: relative;
+  background: var(--panel-bg);
 }
 
+/* ===== 欢迎页 ===== */
 .welcome {
   display: flex;
   align-items: center;
   justify-content: center;
   height: 100%;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+  background: radial-gradient(1200px 600px at 50% 0%, #20263a 0%, var(--app-bg) 60%);
 }
 
 .welcome-content {
   text-align: center;
+  max-width: 460px;
+  padding: 40px;
 }
 
 .welcome-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
+  font-size: 56px;
+  margin-bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(77, 141, 255, 0.22), rgba(77, 141, 255, 0.06));
+  border: 1px solid rgba(77, 141, 255, 0.35);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
 .welcome-content h1 {
-  font-size: 28px;
-  color: #303133;
-  margin-bottom: 12px;
+  font-size: 30px;
+  color: var(--text-1);
+  margin-bottom: 14px;
+  letter-spacing: 0.5px;
 }
 
 .welcome-desc {
   font-size: 14px;
-  color: #909399;
-  line-height: 1.8;
-  margin-bottom: 24px;
+  color: var(--text-2);
+  line-height: 2;
+  margin-bottom: 32px;
 }
 
+/* ===== 编辑器工具栏 ===== */
 .editor-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  border-bottom: 1px solid #e4e7ed;
-  background: #fafafa;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg-2);
 }
 
 .toolbar-left {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .chapter-title-label {
   font-size: 14px;
   font-weight: 500;
-  color: #303133;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 420px;
 }
 
 .chapter-title-label.hint {
-  color: #c0c4cc;
+  color: var(--text-3);
   font-weight: normal;
 }
 
@@ -627,33 +647,34 @@ function createNewProject() {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .word-count {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-2);
 }
 
 .word-count.daily {
-  color: #e6a23c;
+  color: var(--orange);
 }
 
 .goal-met {
-  color: #67c23a;
+  color: var(--green);
   font-weight: 600;
 }
 
 .goal-pending {
-  color: #e6a23c;
+  color: var(--orange);
 }
 
 .save-status {
   font-size: 12px;
-  color: #67c23a;
+  color: var(--green);
 }
 
 .save-status.saving {
-  color: #e6a23c;
+  color: var(--orange);
 }
 
 .editor-body {
@@ -669,11 +690,13 @@ function createNewProject() {
   justify-content: center;
   height: 100%;
   gap: 16px;
-  color: #909399;
+  color: var(--text-2);
+  background: radial-gradient(900px 500px at 50% 30%, var(--panel-bg-2) 0%, var(--panel-bg) 70%);
 }
 
 .no-chapter-hint p {
   font-size: 14px;
+  color: var(--text-2);
 }
 
 .milkdown-editor {
@@ -691,12 +714,12 @@ function createNewProject() {
   font-size: 16px;
   line-height: 1.8;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-  color: #303133;
+  color: var(--text-1);
   background: transparent;
 }
 
 .editor-textarea::placeholder {
-  color: #dcdfe6;
+  color: var(--text-3);
 }
 
 .ai-float-bar {
@@ -706,10 +729,11 @@ function createNewProject() {
   transform: translateX(-50%);
   display: flex;
   gap: 8px;
-  padding: 8px 16px;
-  background: #fff;
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  padding: 8px 12px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
 }
 </style>

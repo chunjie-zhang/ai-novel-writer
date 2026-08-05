@@ -588,6 +588,7 @@ async function scrollToBottom() {
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: var(--panel-bg);
 }
 
 .panel-header {
@@ -595,13 +596,13 @@ async function scrollToBottom() {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border);
 }
 
 .panel-title {
   font-size: 14px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-1);
 }
 
 .panel-actions {
@@ -620,8 +621,8 @@ async function scrollToBottom() {
 
 .chat-hint {
   text-align: center;
-  padding: 40px 20px;
-  color: #909399;
+  padding: 48px 20px;
+  color: var(--text-2);
 }
 
 .hint-icon {
@@ -632,11 +633,12 @@ async function scrollToBottom() {
 .chat-hint p {
   font-size: 14px;
   margin-bottom: 4px;
+  color: var(--text-1);
 }
 
 .hint-sub {
   font-size: 12px !important;
-  color: #c0c4cc;
+  color: var(--text-3);
   line-height: 1.6;
   margin-top: 8px !important;
 }
@@ -675,12 +677,12 @@ async function scrollToBottom() {
 }
 
 .message-item.user .message-avatar {
-  background: #409eff;
+  background: var(--accent);
   color: #fff;
 }
 
 .message-item.assistant .message-avatar {
-  background: #67c23a;
+  background: var(--green);
   color: #fff;
 }
 
@@ -690,23 +692,24 @@ async function scrollToBottom() {
 
 .message-text {
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .message-item.user .message-text {
-  background: #409eff;
+  background: linear-gradient(135deg, var(--accent), #3a6fce);
   color: #fff;
-  border-bottom-right-radius: 2px;
+  border-bottom-right-radius: 3px;
 }
 
 .message-item.assistant .message-text {
-  background: #f0f2f5;
-  color: #303133;
-  border-bottom-left-radius: 2px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  border-bottom-left-radius: 3px;
 }
 
 .message-actions {
@@ -719,15 +722,16 @@ async function scrollToBottom() {
   display: flex;
   gap: 4px;
   padding: 12px 16px;
-  background: #f0f2f5;
-  border-radius: 8px;
-  border-bottom-left-radius: 2px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  border-bottom-left-radius: 3px;
 }
 
 .dot {
   width: 8px;
   height: 8px;
-  background: #909399;
+  background: var(--text-3);
   border-radius: 50%;
   animation: bounce 1.4s infinite ease-in-out;
 }
@@ -743,7 +747,8 @@ async function scrollToBottom() {
 
 .chat-input-area {
   padding: 12px 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border);
+  background: var(--panel-bg-2);
 }
 
 .chat-input-area :deep(.el-textarea__inner) {
@@ -763,11 +768,11 @@ async function scrollToBottom() {
 
 /* ===== 技能面板样式 ===== */
 .skills-panel {
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border);
   max-height: 480px;
   overflow-y: auto;
   padding: 8px 12px;
-  background: #fafbfc;
+  background: var(--panel-bg-2);
 }
 
 .skills-panel-header {
@@ -780,7 +785,7 @@ async function scrollToBottom() {
 .skills-panel-title {
   font-size: 12px;
   font-weight: 600;
-  color: #606266;
+  color: var(--text-2);
 }
 
 .active-skill-banner {
@@ -788,8 +793,8 @@ async function scrollToBottom() {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: #f0f9eb;
-  border: 1px solid #e1f3d8;
+  background: var(--green-soft);
+  border: 1px solid rgba(70, 208, 127, 0.3);
   border-radius: 8px;
   margin-bottom: 8px;
 }
@@ -808,12 +813,12 @@ async function scrollToBottom() {
 .as-name {
   font-size: 13px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-1);
 }
 
 .as-desc {
   font-size: 11px;
-  color: #909399;
+  color: var(--text-2);
 }
 
 .skill-status {
@@ -826,8 +831,8 @@ async function scrollToBottom() {
   align-items: center;
   justify-content: space-between;
   padding: 6px 12px;
-  background: #fdf6ec;
-  border-bottom: 1px solid #faecd8;
+  background: var(--orange-soft);
+  border-bottom: 1px solid rgba(232, 162, 58, 0.25);
   font-size: 12px;
 }
 
@@ -841,14 +846,14 @@ async function scrollToBottom() {
 
 .ref-title {
   font-weight: 500;
-  color: #e6a23c;
+  color: var(--orange);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .ref-count {
-  color: #c0c4cc;
+  color: var(--text-3);
   font-size: 11px;
 }
 

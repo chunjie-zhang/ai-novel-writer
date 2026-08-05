@@ -138,20 +138,20 @@ const avgChapterWords = computed(() => {
 .report { display: flex; flex-direction: column; gap: 20px; }
 
 .overview-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.stat-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 8px; background: #f5f7fa; border-radius: 8px; }
-.stat-value { font-size: 22px; font-weight: 700; color: #409eff; }
-.stat-label { font-size: 12px; color: #909399; }
+.stat-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 8px; background: var(--panel-bg-2); border: 1px solid var(--border); border-radius: 12px; }
+.stat-value { font-size: 22px; font-weight: 700; color: var(--accent); }
+.stat-label { font-size: 12px; color: var(--text-2); }
 
-.goal-section h4, .calendar-section h4, .chapter-stats h4 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+.goal-section h4, .calendar-section h4, .chapter-stats h4 { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--text-1); }
 
 .week-calendar { display: flex; justify-content: space-between; gap: 8px; padding: 12px 0; }
 .cal-day { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
-.cal-label { font-size: 12px; color: #909399; }
-.cal-bar { width: 16px; height: 80px; background: #f0f0f0; border-radius: 8px; position: relative; overflow: hidden; }
-.cal-fill { position: absolute; bottom: 0; left: 0; right: 0; background: #409eff; border-radius: 8px 8px 0 0; transition: height 0.3s; }
-.cal-day.active .cal-fill { background: #67c23a; }
-.cal-value { font-size: 10px; color: #909399; }
+.cal-label { font-size: 12px; color: var(--text-2); }
+.cal-bar { width: 16px; height: 80px; background: var(--panel-hover); border-radius: 8px; position: relative; overflow: hidden; }
+.cal-fill { position: absolute; bottom: 0; left: 0; right: 0; background: var(--accent); border-radius: 8px 8px 0 0; transition: height 0.3s; }
+.cal-day.active .cal-fill { background: var(--green); }
+.cal-value { font-size: 10px; color: var(--text-2); }
 
-.stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; color: #606266; }
-.stat-num { font-weight: 600; color: #303133; }
+.stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-2); }
+.stat-num { font-weight: 600; color: var(--text-1); }
 </style>

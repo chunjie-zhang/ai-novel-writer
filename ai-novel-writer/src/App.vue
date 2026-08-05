@@ -222,7 +222,7 @@ onBeforeUnmount(() => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: var(--app-bg);
 }
 
 .app-header {
@@ -231,10 +231,12 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
   -webkit-app-region: drag;
   flex-shrink: 0;
+  z-index: 20;
 }
 
 .header-left {
@@ -247,7 +249,8 @@ onBeforeUnmount(() => {
 .app-logo {
   font-size: 15px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-1);
+  letter-spacing: 0.3px;
 }
 
 .header-center {
@@ -257,13 +260,13 @@ onBeforeUnmount(() => {
 
 .project-name {
   font-size: 14px;
-  color: #409eff;
+  color: var(--accent);
   font-weight: 500;
 }
 
 .no-project {
   font-size: 13px;
-  color: #c0c4cc;
+  color: var(--text-3);
 }
 
 .storage-picker {
@@ -278,7 +281,7 @@ onBeforeUnmount(() => {
 
 .form-hint {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-2);
   line-height: 1.6;
   margin-top: 4px;
   word-break: break-all;
@@ -301,8 +304,8 @@ onBeforeUnmount(() => {
 
 .sidebar-left {
   width: var(--sidebar-width);
-  background: #fff;
-  border-right: 1px solid #e4e7ed;
+  background: var(--panel-bg);
+  border-right: 1px solid var(--border);
   overflow-y: auto;
   flex-shrink: 0;
 }
@@ -322,14 +325,10 @@ onBeforeUnmount(() => {
   position: relative;
 }
 
-.resize-handle:hover {
-  background: #409eff;
-  opacity: 0.5;
-}
-
+.resize-handle:hover,
 .resize-handle.dragging {
-  background: #409eff;
-  opacity: 0.5;
+  background: var(--accent);
+  opacity: 0.6;
 }
 
 /* 专注模式：隐藏侧边栏和分隔条 */
@@ -354,14 +353,14 @@ onBeforeUnmount(() => {
 .main-content {
   flex: 1;
   min-width: 0;
-  background: #fff;
+  background: var(--panel-bg);
   margin: 0 1px;
 }
 
 .sidebar-right {
   width: var(--right-panel-width);
-  background: #fff;
-  border-left: 1px solid #e4e7ed;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--border);
   overflow-y: auto;
   flex-shrink: 0;
 }

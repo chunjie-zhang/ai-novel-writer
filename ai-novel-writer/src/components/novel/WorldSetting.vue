@@ -181,12 +181,14 @@ function handleSave() {
 .ws-header h3 {
   font-size: 16px;
   font-weight: 600;
+  color: var(--text-1);
 }
 
 .faction-card {
   padding: 12px;
-  background: #fafafa;
-  border-radius: 8px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
   margin-bottom: 8px;
 }
 

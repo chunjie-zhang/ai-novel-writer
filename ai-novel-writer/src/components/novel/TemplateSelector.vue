@@ -62,22 +62,23 @@ const templateStore = useTemplateStore();
 
 .template-card {
   display: flex; flex-direction: column; gap: 6px;
-  padding: 16px; border: 2px solid #e4e7ed; border-radius: 10px;
+  padding: 16px; border: 2px solid var(--border); border-radius: 12px;
   cursor: pointer; transition: all 0.2s;
+  background: var(--panel-bg-2);
 }
 
-.template-card:hover { border-color: #409eff; background: #f0f7ff; }
-.template-card.active { border-color: #409eff; background: #ecf5ff; }
+.template-card:hover { border-color: var(--accent); background: var(--panel-hover); }
+.template-card.active { border-color: var(--accent); background: var(--accent-soft); }
 
 .template-emoji { font-size: 28px; }
-.template-name { font-size: 15px; font-weight: 600; }
-.template-desc { font-size: 12px; color: #909399; }
+.template-name { font-size: 15px; font-weight: 600; color: var(--text-1); }
+.template-desc { font-size: 12px; color: var(--text-2); }
 .template-tags { display: flex; gap: 4px; flex-wrap: wrap; }
 
 .template-detail { text-align: left; }
-.template-detail h4 { margin-bottom: 12px; }
+.template-detail h4 { margin-bottom: 12px; color: var(--text-1); }
 .detail-section { display: flex; flex-direction: column; gap: 10px; }
 .detail-item { }
-.detail-label { font-size: 12px; color: #909399; font-weight: 600; }
-.detail-value { font-size: 13px; color: #303133; margin: 4px 0 0; line-height: 1.6; }
+.detail-label { font-size: 12px; color: var(--text-2); font-weight: 600; }
+.detail-value { font-size: 13px; color: var(--text-1); margin: 4px 0 0; line-height: 1.6; }
 </style>
