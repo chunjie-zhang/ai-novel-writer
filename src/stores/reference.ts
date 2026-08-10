@@ -1,0 +1,270 @@
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import { invoke } from "@tauri-apps/api/core";
+import type {
+  ReferenceNovel,
+  ReferenceChapter,
+  NovelAnalysis,
+  WritingMode,
+} from "@/types";
+import { WRITING_MODES } from "@/types";
+import { useAIStore } from "./ai";
+
+interface RawImportedNovel {
+  id: string;
+  file_name: string;
+  title: string;
+  total_words: number;
+  total_chapters: number;
+  imported_at: string;
+  chapters: {
+    index: number;
+    title: string;
+    content: string;
+    word_count: number;
+  }[];
+}
+
+export const useReferenceStore = defineStore("reference", () => {
+  // ===== 状态 =====
+  const referenceNovel = ref<ReferenceNovel | null>(null);
+  const chapters = ref<ReferenceChapter[]>([]);
+  const analysis = ref<NovelAnalysis | null>(null);
+  const writingMode = ref<WritingMode | null>(null);
+  const selectedChapters = ref<number[]>([]);
+  const isLoading = ref(false);
+  const isAnalyzing = ref(false);
+
+  // ===== 计算属性 =====
+  const hasReference = computed(() => referenceNovel.value !== null);
+  const hasAnalysis = computed(() => analysis.value !== null);
+  const currentMode = computed(() =>
+    writingMode.value ? WRITING_MODES[writingMode.value] : null
+  );
+
+  /** 用于 system prompt 的小说上下文摘要 */
+  const referenceContext = computed(() => {
+    if (!referenceNovel.value) return "";
+    let ctx = `【参考小说：${referenceNovel.value.title}】\n`;
+    ctx += `总字数：${referenceNovel.value.total_words}字，共${referenceNovel.value.total_chapters}章\n`;
+
+    if (analysis.value) {
+      ctx += `\n风格摘要：${analysis.value.style_summary}\n`;
+      ctx += `写作特点：${analysis.value.writing_features.join("、")}\n`;
+      ctx += `叙事视角：${analysis.value.narrative_perspective}\n`;
+
+      if (analysis.value.main_characters.length > 0) {
+        ctx += `\n主要角色：\n`;
+        for (const c of analysis.value.main_characters) {
+          ctx += `- ${c.name}（${c.role}）：${c.traits}\n`;
+        }
+      }
+    }
+
+    return ctx;
+  });
+
+  // ===== 方法 =====
+
+  /** 导入小说文件 */
+  async function importFile(filePath: string) {
+    isLoading.value = true;
+    try {
+      const result = await invoke<RawImportedNovel>("import_novel_file", {
+        filePath,
+      });
+
+      referenceNovel.value = {
+        id: result.id,
+        file_name: result.file_name,
+        title: result.title,
+        total_words: result.total_words,
+        total_chapters: result.total_chapters,
+        imported_at: result.imported_at,
+        source_path: filePath,
+      };
+
+      chapters.value = result.chapters.map((ch) => ({
+        index: ch.index,
+        title: ch.title,
+        content: ch.content,
+        word_count: ch.word_count,
+      }));
+
+      // 默认选择前 3 章作为分析样本
+      selectedChapters.value = chapters.value.slice(0, 3).map((c) => c.index);
+      analysis.value = null;
+      writingMode.value = null;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /** AI 分析小说 */
+  async function analyzeNovel() {
+    if (!chapters.value.length) return;
+
+    isAnalyzing.value = true;
+    try {
+      const sampleChapters = selectedChapters.value.length > 0
+        ? chapters.value.filter((c) => selectedChapters.value.includes(c.index))
+        : chapters.value.slice(0, 3);
+
+      const sampleContent = sampleChapters
+        .map((c) => `【${c.title}】\n${c.content.slice(0, 2000)}`)
+        .join("\n\n");
+
+      const aiStore = useAIStore();
+      const response = await invoke<any>("call_ai", {
+        baseUrl: aiStore.resolvedBaseUrl,
+        apiKey: aiStore.resolvedApiKey,
+        model: aiStore.resolvedModelName,
+        messages: [
+          {
+            role: "system",
+            content: `你是一名专业的小说分析专家。请分析以下小说章节内容，输出 JSON 格式的分析结果。
+
+严格按照以下 JSON 结构返回，不要加任何额外说明：
+{
+  "style_summary": "整体风格描述，30-50字",
+  "writing_features": ["特点1", "特点2", "特点3", "特点4"],
+  "narrative_perspective": "叙事视角分析",
+  "pace_description": "节奏特点描述",
+  "dialogue_style": "对话风格描述",
+  "main_characters": [
+    {"name": "角色名", "role": "在故事中的角色", "traits": "性格特征"}
+  ],
+  "plot_structure": "情节结构分析",
+  "imitable_aspects": ["适合仿写的维度1", "维度2", "维度3"]
+}`,
+          },
+          { role: "user", content: sampleContent },
+        ],
+        temperature: 0.3,
+        maxTokens: 4096,
+      });
+
+      const result = JSON.parse(response.content);
+      analysis.value = {
+        style_summary: result.style_summary || "",
+        writing_features: result.writing_features || [],
+        narrative_perspective: result.narrative_perspective || "",
+        pace_description: result.pace_description || "",
+        dialogue_style: result.dialogue_style || "",
+        main_characters: result.main_characters || [],
+        plot_structure: result.plot_structure || "",
+        imitable_aspects: result.imitable_aspects || [],
+      };
+    } catch (e) {
+      console.error("分析失败:", e);
+      // 使用兜底分析
+      analysis.value = {
+        style_summary: "分析失败，请重试",
+        writing_features: [],
+        narrative_perspective: "",
+        pace_description: "",
+        dialogue_style: "",
+        main_characters: [],
+        plot_structure: "",
+        imitable_aspects: [],
+      };
+    } finally {
+      isAnalyzing.value = false;
+    }
+  }
+
+  /** 设置写作模式 */
+  function setWritingMode(mode: WritingMode | null) {
+    writingMode.value = mode;
+  }
+
+  /** 获取当前模式的 system prompt */
+  function getModeSystemPrompt(): string {
+    if (!writingMode.value || !analysis.value) {
+      return "你是一位专业的小说创作助手。";
+    }
+
+    const mode = writingMode.value;
+    const ctx = referenceContext.value;
+
+    const modePrompts: Record<WritingMode, string> = {
+      imitate: `你是一位擅长模仿文风的小说作家。请严格模仿参考小说的文风、叙事节奏和语言特点进行创作。
+
+参考小说分析：
+${ctx}
+
+要求：
+1. 严格模仿原文的句式长度、用词习惯和修辞手法
+2. 保持与原文一致的叙事节奏（详略安排、段落长短）
+3. 模仿原文的人物对话风格
+4. 延续原文的氛围营造方式
+5. 直接输出创作内容，不要加任何说明`,
+
+      reference: `你是一位擅长借鉴优秀作品的小说作家。请参考小说的剧情结构和情节设计，创作出具有原创性的新内容。
+
+参考小说分析：
+${ctx}
+
+要求：
+1. 可以借鉴剧情结构（如起承转合的方式），但不能照搬具体情节
+2. 可以借鉴人物关系的设定逻辑，但角色要全新
+3. 可以借鉴悬念设置的手法，但故事走向要不同
+4. 保持你自己的创作风格，不要完全照抄
+5. 直接输出创作内容`,
+
+      "continue-ref": `你是一位续写师。请严格延续参考小说的风格和内容进行续写。
+
+参考小说分析：
+${ctx}
+
+要求：
+1. 保持角色性格和关系的一致性
+2. 延续原有的剧情逻辑和发展方向
+3. 保持文风和叙事节奏不变
+4. 注意与前文的情节衔接
+5. 直接输出续写内容`,
+
+      analyze: `你是一位专业的小说分析专家。请基于对参考小说的分析，回答用户的问题。
+
+参考小说分析：
+${ctx}
+
+你可以分析：
+- 小说的文风和写作技巧
+- 人物塑造的方法
+- 情节结构的安排
+- 可以借鉴的创作手法
+- 与其他作品的比较分析`,
+    };
+
+    return modePrompts[mode] || modePrompts.analyze;
+  }
+
+  /** 清除参考小说 */
+  function clear() {
+    referenceNovel.value = null;
+    chapters.value = [];
+    analysis.value = null;
+    writingMode.value = null;
+    selectedChapters.value = [];
+  }
+
+  return {
+    referenceNovel,
+    chapters,
+    analysis,
+    writingMode,
+    selectedChapters,
+    isLoading,
+    isAnalyzing,
+    hasReference,
+    hasAnalysis,
+    currentMode,
+    referenceContext,
+    importFile,
+    analyzeNovel,
+    setWritingMode,
+    getModeSystemPrompt,
+    clear,
+  };
+});
