@@ -91,8 +91,6 @@ describe("编辑器字数上报（打开章节不计入日更）", () => {
     window.addEventListener("editor-user-input", listener);
 
     // createChapter 内部会调 invoke，直接设 content.value，不经过 setContent
-    const invokeStub = () =>
-      Promise.resolve("/mock/新章节.md");
     // 手动模拟 createChapter 的设值路径（不派发事件）
     store.setContent("");
     expect(count).toBe(0);
