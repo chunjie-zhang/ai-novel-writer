@@ -1,5 +1,8 @@
 <template>
-  <el-dialog v-model="visible" title="🕳️ 伏笔 & 坑位管理" width="560px">
+  <el-dialog v-model="visible" width="560px">
+    <template #header>
+      <span class="dlg-title"><el-icon><Icon icon="lucide:alert-triangle" /></el-icon> 伏笔 & 坑位管理</span>
+    </template>
     <div class="plot-hole">
       <!-- 新增 -->
       <div class="ph-add">

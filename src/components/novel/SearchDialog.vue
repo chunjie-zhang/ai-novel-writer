@@ -1,5 +1,8 @@
 <template>
-  <el-dialog v-model="visible" title="🔍 全文搜索" width="600px">
+  <el-dialog v-model="visible" width="600px">
+    <template #header>
+      <span class="dlg-title"><el-icon><Icon icon="lucide:search" /></el-icon> 全文搜索</span>
+    </template>
     <div class="search-dialog">
       <div class="search-bar">
         <el-input

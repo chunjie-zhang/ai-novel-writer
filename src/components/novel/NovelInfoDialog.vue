@@ -1,5 +1,8 @@
 <template>
-  <el-dialog v-model="visible" title="📖 小说信息" width="500px">
+  <el-dialog v-model="visible" width="500px">
+    <template #header>
+      <span class="dlg-title"><el-icon><Icon icon="lucide:book-open" /></el-icon> 小说信息</span>
+    </template>
     <el-form label-position="top" size="small">
       <el-form-item label="小说名称">
         <el-input v-model="info.name" placeholder="输入小说名称" />

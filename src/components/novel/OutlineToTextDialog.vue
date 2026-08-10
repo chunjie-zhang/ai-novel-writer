@@ -1,11 +1,13 @@
 <template>
   <el-dialog
     :model-value="visible"
-    title="📝 细纲 → 正文一键生成"
     width="720px"
     @update:model-value="$emit('update:visible', $event)"
     destroy-on-close
   >
+    <template #header>
+      <span class="dlg-title"><el-icon><Icon icon="lucide:pen-line" /></el-icon> 细纲 → 正文一键生成</span>
+    </template>
     <div class="outline-text-dialog">
       <!-- 细纲输入 -->
       <div class="section">

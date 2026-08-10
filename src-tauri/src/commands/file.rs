@@ -144,6 +144,35 @@ pub fn save_chapter(app_handle: tauri::AppHandle, project_id: String, chapter_ti
     Ok(rel)
 }
 
+/// 创建章节分组（卷）目录：在 chapters/ 下新建一个空卷目录
+#[tauri::command]
+pub fn create_group(app_handle: tauri::AppHandle, project_id: String, group: String) -> Result<(), String> {
+    let safe_group = sanitize_group(&group);
+    if safe_group.is_empty() {
+        return Err("分组名不能为空".to_string());
+    }
+    let dir = config::get_project_dir(&app_handle, &project_id)
+        .join("chapters")
+        .join(&safe_group);
+    fs::create_dir_all(&dir).map_err(|e| format!("创建分组失败: {}", e))
+}
+
+/// 删除章节分组（卷）目录：递归删除 chapters/ 下整个卷及其所有章节
+#[tauri::command]
+pub fn delete_group(app_handle: tauri::AppHandle, project_id: String, group: String) -> Result<(), String> {
+    let safe_group = sanitize_group(&group);
+    if safe_group.is_empty() {
+        return Err("分组名不能为空".to_string());
+    }
+    let dir = config::get_project_dir(&app_handle, &project_id)
+        .join("chapters")
+        .join(&safe_group);
+    if dir.exists() {
+        fs::remove_dir_all(&dir).map_err(|e| format!("删除分组失败: {}", e))?;
+    }
+    Ok(())
+}
+
 /// 读取章节内容
 #[tauri::command]
 pub fn read_chapter(app_handle: tauri::AppHandle, project_id: String, file_name: String) -> Result<String, String> {

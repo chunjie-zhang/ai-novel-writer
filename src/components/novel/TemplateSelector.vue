@@ -1,5 +1,8 @@
 <template>
-  <el-dialog v-model="visible" title="📚 题材风格模板" width="700px">
+  <el-dialog v-model="visible" width="700px">
+    <template #header>
+      <span class="dlg-title"><el-icon><Icon icon="lucide:layout-template" /></el-icon> 题材风格模板</span>
+    </template>
     <div class="template-selector">
       <div class="template-grid">
         <div

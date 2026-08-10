@@ -14,14 +14,14 @@ export type SkillCategory =
   | "utils";     // 工具
 
 /** 技能分类元信息 */
-export const SKILL_CATEGORIES: Record<SkillCategory, { label: string; emoji: string; desc: string }> = {
-  world:     { label: "世界观", emoji: "🌍", desc: "世界构建、势力设定、地理环境" },
-  character: { label: "角色",   emoji: "👤", desc: "角色设定、关系网、对话风格" },
-  plot:      { label: "剧情",   emoji: "📜", desc: "大纲规划、章节设计、剧情推演" },
-  writing:   { label: "写作",   emoji: "✍️", desc: "续写、扩写、润色、改写" },
-  review:    { label: "审校",   emoji: "🔍", desc: "连续性检查、质量审校" },
-  translate: { label: "翻译",   emoji: "🌐", desc: "多语言翻译" },
-  utils:     { label: "工具",   emoji: "🔧", desc: "格式转换、字数统计" },
+export const SKILL_CATEGORIES: Record<SkillCategory, { label: string; emoji: string; icon: string; desc: string }> = {
+  world:     { label: "世界观", emoji: "🌍", icon: "lucide:globe", desc: "世界构建、势力设定、地理环境" },
+  character: { label: "角色",   emoji: "👤", icon: "lucide:user", desc: "角色设定、关系网、对话风格" },
+  plot:      { label: "剧情",   emoji: "📜", icon: "lucide:scroll-text", desc: "大纲规划、章节设计、剧情推演" },
+  writing:   { label: "写作",   emoji: "✍️", icon: "lucide:pen-line", desc: "续写、扩写、润色、改写" },
+  review:    { label: "审校",   emoji: "🔍", icon: "lucide:spell-check", desc: "连续性检查、质量审校" },
+  translate: { label: "翻译",   emoji: "🌐", icon: "lucide:languages", desc: "多语言翻译" },
+  utils:     { label: "工具",   emoji: "🔧", icon: "lucide:wrench", desc: "格式转换、字数统计" },
 };
 
 /**
@@ -38,6 +38,8 @@ export interface WritingSkill {
   description: string;
   /** emoji 图标 */
   emoji: string;
+  /** lucide 图标名（如 lucide:globe），用于技能列表/选择器展示；缺省时回退 emoji */
+  icon?: string;
   /** 分类 */
   category: SkillCategory;
   /** 标签 */

@@ -128,31 +128,82 @@
             </el-menu-item>
           </el-sub-menu>
 
-          <!-- 章节列表（按分组展示） -->
-          <template v-for="g in getChapterGroups(proj.id)" :key="g || '__root__'">
-            <el-menu-item-group v-if="g" :title="g">
+          <!-- 章节列表（收纳进可折叠「章节」文件夹，避免上千章平铺太散） -->
+          <el-sub-menu :index="`${proj.id}:__chapters__`" class="chapters-submenu">
+            <template #title>
+              <el-icon><Icon icon="lucide:folder" /></el-icon>
+              <span>章节</span>
+              <span class="chapters-count">{{ getChapters(proj.id).length }}章</span>
+              <el-tooltip content="新建卷" placement="top">
+                <el-button
+                  text
+                  size="small"
+                  class="add-volume-btn"
+                  @mousedown.stop
+                  @click.stop="handleAddVolume(proj)"
+                >
+                  <el-icon><Icon icon="lucide:plus" /></el-icon>
+                </el-button>
+              </el-tooltip>
+            </template>
+            <template v-for="g in getChapterGroups(proj.id)" :key="g || '__root__'">
+              <el-menu-item-group v-if="g">
+                <template #title>
+                  <span class="group-title-text">{{ g }}</span>
+                  <el-tooltip content="删除卷（含卷内所有章节）" placement="top">
+                    <el-button
+                      text
+                      size="small"
+                      class="group-del-btn"
+                      @click.stop="handleDeleteGroup(proj, g)"
+                    >
+                      <el-icon><Icon icon="lucide:trash-2" /></el-icon>
+                    </el-button>
+                  </el-tooltip>
+                </template>
+                <el-menu-item
+                  v-for="chapter in getGroupChapters(proj.id, g)"
+                  :key="chapter.file_name"
+                  :index="`${proj.id}:${chapter.file_name}`"
+                >
+                  <el-icon><Icon icon="lucide:file-text" /></el-icon>
+                  <span class="chapter-name">{{ chapter.title }}</span>
+                  <span class="chapter-words">{{ chapter.word_count }}字</span>
+                  <el-tooltip content="删除章节" placement="top">
+                    <el-button
+                      text
+                      size="small"
+                      class="chapter-del-btn"
+                      @click.stop="handleDeleteChapter(proj, chapter)"
+                    >
+                      <el-icon><Icon icon="lucide:trash-2" /></el-icon>
+                    </el-button>
+                  </el-tooltip>
+                </el-menu-item>
+              </el-menu-item-group>
+              <!-- 未分组的章节直接平铺展示 -->
               <el-menu-item
                 v-for="chapter in getGroupChapters(proj.id, g)"
+                v-else
                 :key="chapter.file_name"
                 :index="`${proj.id}:${chapter.file_name}`"
               >
                 <el-icon><Icon icon="lucide:file-text" /></el-icon>
                 <span class="chapter-name">{{ chapter.title }}</span>
                 <span class="chapter-words">{{ chapter.word_count }}字</span>
+                <el-tooltip content="删除章节" placement="top">
+                  <el-button
+                    text
+                    size="small"
+                    class="chapter-del-btn"
+                    @click.stop="handleDeleteChapter(proj, chapter)"
+                  >
+                    <el-icon><Icon icon="lucide:trash-2" /></el-icon>
+                  </el-button>
+                </el-tooltip>
               </el-menu-item>
-            </el-menu-item-group>
-            <!-- 未分组的章节直接平铺展示 -->
-            <el-menu-item
-              v-for="chapter in getGroupChapters(proj.id, g)"
-              v-else
-              :key="chapter.file_name"
-              :index="`${proj.id}:${chapter.file_name}`"
-            >
-              <el-icon><Icon icon="lucide:file-text" /></el-icon>
-              <span class="chapter-name">{{ chapter.title }}</span>
-              <span class="chapter-words">{{ chapter.word_count }}字</span>
-            </el-menu-item>
-          </template>
+            </template>
+          </el-sub-menu>
         </el-sub-menu>
       </template>
     </el-menu>
@@ -234,7 +285,7 @@ const showTemplates = ref(false);
 const projectStore = useProjectStore();
 const editorStore = useEditorStore();
 const openMenus = ref<string[]>([]);
-// 初始化时自动展开已打开的项目
+// 初始化时自动展开已打开的项目（「章节」文件夹默认折叠收纳，点开才显示章节）
 if (projectStore.currentProject?.id) {
   openMenus.value = [projectStore.currentProject.id];
 }
@@ -249,10 +300,20 @@ function getChapters(projectId: string) {
   return chaptersCache.value[projectId] || [];
 }
 
-/** 章节分组列表（保持出现顺序，未分组为 ""） */
+/** 章节分组列表（保持出现顺序，未分组为 ""；包含已创建的空卷） */
 function getChapterGroups(projectId: string) {
   const groups: string[] = [];
   const seen = new Set<string>();
+  // 已创建的卷（仅当前项目，含空卷）
+  if (projectId === projectStore.currentProject?.id) {
+    for (const g of projectStore.groups) {
+      if (g && !seen.has(g)) {
+        seen.add(g);
+        groups.push(g);
+      }
+    }
+  }
+  // 章节中实际出现的分组
   for (const c of getChapters(projectId)) {
     const g = c.group || "";
     if (!seen.has(g)) {
@@ -273,11 +334,90 @@ async function ensureOpen(projectId: string) {
   if (projectStore.currentProject?.id !== projectId) {
     await projectStore.openProject(projectId);
   }
+  // 展开项目节点（「章节」文件夹保持折叠收纳，由用户点击展开）
+  if (!openMenus.value.includes(projectId)) {
+    openMenus.value.push(projectId);
+  }
 }
 
 /** 点击小说节点标题：直接打开/选中该小说（不阻止菜单展开） */
 async function handleProjectNodeClick(proj: any) {
   await ensureOpen(proj.id);
+}
+
+/** 新建卷：在 chapters/ 下创建一个空卷目录 */
+async function handleAddVolume(proj: any) {
+  try {
+    const { value } = await ElMessageBox.prompt(
+      "输入新卷名称（如：第一卷 / 第二卷），创建后可往卷里新建章节。",
+      "新建卷",
+      {
+        confirmButtonText: "创建",
+        cancelButtonText: "取消",
+        inputValue: `第${projectStore.groups.length + 1}卷`,
+        inputPlaceholder: "如：第一卷",
+      }
+    );
+    if (!value || !value.trim()) return;
+    await invoke("create_group", {
+      projectId: proj.id,
+      group: value.trim(),
+    });
+    ElMessage.success(`已创建卷「${value.trim()}」`);
+    await projectStore.openProject(proj.id);
+  } catch {
+    // 用户取消
+  }
+}
+
+/** 删除单个章节（带确认） */
+async function handleDeleteChapter(proj: any, chapter: any) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除章节「${chapter.title}」吗？此操作不可恢复。`,
+      "删除章节",
+      { type: "warning", confirmButtonText: "删除", cancelButtonText: "取消" }
+    );
+  } catch {
+    return;
+  }
+  try {
+    await invoke("delete_chapter", {
+      projectId: proj.id,
+      fileName: chapter.file_name,
+    });
+    // 同步清理该章节的历史版本
+    useVersionsStore().clearChapter(proj.id, chapter.file_name);
+    ElMessage.success(`已删除章节「${chapter.title}」`);
+    await projectStore.openProject(proj.id);
+  } catch (e) {
+    ElMessage.error("删除章节失败: " + e);
+  }
+}
+
+/** 删除整个卷（含卷内所有章节，带确认） */
+async function handleDeleteGroup(proj: any, group: string) {
+  const count = getGroupChapters(proj.id, group).length;
+  try {
+    await ElMessageBox.confirm(
+      `确定删除卷「${group}」吗？将同时删除卷内 ${count} 个章节，此操作不可恢复！`,
+      "删除卷",
+      { type: "error", confirmButtonText: "删除", cancelButtonText: "取消" }
+    );
+  } catch {
+    return;
+  }
+  try {
+    // 清理卷内所有章节的历史版本
+    for (const c of getGroupChapters(proj.id, group)) {
+      useVersionsStore().clearChapter(proj.id, c.file_name);
+    }
+    await invoke("delete_group", { projectId: proj.id, group });
+    ElMessage.success(`已删除卷「${group}」`);
+    await projectStore.openProject(proj.id);
+  } catch (e) {
+    ElMessage.error("删除卷失败: " + e);
+  }
 }
 
 async function handleSelect(index: string) {
@@ -526,6 +666,14 @@ async function handleWorldSave(world: any) {
   background: transparent;
 }
 
+/* 覆盖 EP 对子菜单内 .el-icon 的默认规则（width: var(--el-menu-icon-width) + margin-right: 5px），
+   避免按钮内图标被撑大后向左偏移 */
+.tree-menu :deep(.el-button .el-icon) {
+  width: auto;
+  margin: 0;
+  font-size: inherit;
+}
+
 /* 章节节点文字 */
 .tree-menu :deep(.el-menu-item) {
   color: var(--text-2);
@@ -547,6 +695,8 @@ async function handleWorldSave(world: any) {
   width: 100%;
   font-size: 13px;
   position: relative;
+  /* 为选中态左侧指示条留出间距，避免竖线与文件夹图标贴在一起 */
+  padding-left: 10px;
 }
 
 /* 选中的小说：标题行整体高亮背景 + 左侧指示条 + 加粗蓝字 */
@@ -586,6 +736,87 @@ async function handleWorldSave(world: any) {
 .node-date {
   font-size: 11px;
   color: var(--text-3);
+}
+
+/* 「章节」收纳文件夹 */
+.chapters-submenu :deep(.el-sub-menu__title) {
+  color: var(--text-2);
+  font-weight: 600;
+  font-size: 13px;
+}
+.chapters-count {
+  margin-left: auto;
+  padding-right: 8px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+.add-volume-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin-right: 4px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+.add-volume-btn:hover {
+  color: var(--accent);
+}
+
+/* 卷分组标题 */
+.chapters-submenu :deep(.el-menu-item-group__title) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+}
+.group-title-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.group-del-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  color: var(--text-3);
+  opacity: 0;
+  flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s, color 0.15s;
+}
+.el-menu-item-group:hover .group-del-btn {
+  opacity: 1;
+}
+.group-del-btn:hover {
+  color: var(--red);
+}
+
+/* 章节删除按钮：hover 显示，垂直居中，与左侧内容保持间距 */
+.chapter-del-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin-left: 10px;
+  color: var(--text-3);
+  opacity: 0;
+  flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s, color 0.15s;
+}
+.chapters-submenu :deep(.el-menu-item:hover .chapter-del-btn),
+.el-menu-item:hover .chapter-del-btn {
+  opacity: 1;
+}
+.chapter-del-btn:hover {
+  color: var(--red);
 }
 
 /* 项目节点上的「迁移位置」按钮：始终显示，hover 变蓝 */

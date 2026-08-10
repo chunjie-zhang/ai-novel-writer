@@ -6,7 +6,9 @@ import { useVersionsStore } from "@/stores/versions";
 import { useProjectStore } from "@/stores/project";
 import {
   extractChapterTitle,
+  normalizeChapterTitle,
   buildChapterFileName,
+  fixDirtyTitle,
 } from "@/utils/chapterTitle";
 
 const CURSOR_STORAGE_KEY = "novel-cursor-memory";
@@ -35,6 +37,8 @@ export const useEditorStore = defineStore("editor", () => {
   // 状态
   const currentChapter = ref<ChapterInfo | null>(null);
   const content = ref("");
+  /** 当前章节标题（含「第N章」前缀，如：第3章 天启城） */
+  const chapterTitle = ref("");
   const isSaving = ref(false);
   const lastSavedContent = ref("");
 
@@ -70,8 +74,11 @@ export const useEditorStore = defineStore("editor", () => {
   // 方法
   async function openChapter(chapter: ChapterInfo, chapterContent: string) {
     currentChapter.value = chapter;
-    content.value = chapterContent;
-    lastSavedContent.value = chapterContent;
+    // 打开时自动修复内容首行的脏标题（含路径 / .md）
+    const fixed = fixDirtyTitle(chapterContent);
+    content.value = fixed;
+    lastSavedContent.value = fixed;
+    chapterTitle.value = extractChapterTitle(fixed) || chapter.title;
     cursorPosition.value = 0;
     scrollPosition.value = 0;
   }
@@ -83,8 +90,23 @@ export const useEditorStore = defineStore("editor", () => {
     projectId: string
   ) {
     currentChapter.value = chapter;
-    content.value = chapterContent;
-    lastSavedContent.value = chapterContent;
+    // 打开时自动修复内容首行的脏标题（含路径 / .md），并写回磁盘持久修复
+    const fixed = fixDirtyTitle(chapterContent);
+    content.value = fixed;
+    lastSavedContent.value = fixed;
+    chapterTitle.value = extractChapterTitle(fixed) || chapter.title;
+    if (fixed !== chapterContent) {
+      try {
+        await invoke("save_chapter", {
+          projectId,
+          chapterTitle: chapter.title,
+          group: chapter.group || "",
+          content: fixed,
+        });
+      } catch (e) {
+        console.error("修复章节标题写盘失败:", e);
+      }
+    }
 
     // 检查是否有断稿记忆
     const mem = loadCursorMemory();
@@ -122,10 +144,13 @@ export const useEditorStore = defineStore("editor", () => {
     if (!chapter) return;
 
     const newTitle = extractChapterTitle(content.value);
-    if (!newTitle || newTitle === chapter.title) return;
+    if (!newTitle) return;
+    // 规范化标题：去掉路径前缀 / # / 扩展名，得到与左侧一致的纯标题
+    const cleanTitle = normalizeChapterTitle(newTitle);
+    if (!cleanTitle || cleanTitle === chapter.title) return;
 
     const oldFileName = chapter.file_name;
-    const newFileName = buildChapterFileName(newTitle, chapter.group || "");
+    const newFileName = buildChapterFileName(cleanTitle, chapter.group || "");
     if (newFileName === oldFileName) return;
 
     try {
@@ -138,8 +163,8 @@ export const useEditorStore = defineStore("editor", () => {
       // 迁移历史版本到新文件名
       useVersionsStore().renameChapter(projectId, oldFileName, newFileName);
 
-      // 更新内存中的章节信息
-      chapter.title = newTitle;
+      // 更新内存中的章节信息（纯标题，不含路径）
+      chapter.title = cleanTitle;
       chapter.file_name = newFileName;
 
       // 迁移断稿记忆中的文件名
@@ -154,7 +179,7 @@ export const useEditorStore = defineStore("editor", () => {
 
       // 通知 UI 标题已同步
       window.dispatchEvent(
-        new CustomEvent("chapter-title-synced", { detail: newTitle })
+        new CustomEvent("chapter-title-synced", { detail: cleanTitle })
       );
     } catch (e) {
       console.error("同步章节标题失败:", e);
@@ -202,9 +227,12 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   async function createChapter(projectId: string, title: string, group: string = "") {
+    // 规范化标题：去掉分组路径 / # / .md 等，得到纯标题
+    const baseTitle = normalizeChapterTitle(title) || title;
     // 清理文件名中的特殊字符，与 Rust 后端 save_chapter 保持一致
-    const safeTitle = title.replace(/[<>:"\\|?*/]/g, "_");
-    const defaultContent = `# ${title}\n\n`;
+    const safeTitle = baseTitle.replace(/[<>:"\\|?*/]/g, "_");
+    // 默认内容首行标题与文件名/左侧一致，避免一保存就误触发标题同步
+    const defaultContent = `# ${safeTitle}\n\n`;
     const filePath = await invoke<string>("save_chapter", {
       projectId,
       chapterTitle: safeTitle,
@@ -214,7 +242,7 @@ export const useEditorStore = defineStore("editor", () => {
 
     const newChapter: ChapterInfo = {
       id: title,
-      title,
+      title: safeTitle,
       file_name: filePath,
       group,
       order: 0,
@@ -226,6 +254,7 @@ export const useEditorStore = defineStore("editor", () => {
     currentChapter.value = newChapter;
     content.value = defaultContent;
     lastSavedContent.value = defaultContent;
+    chapterTitle.value = safeTitle;
     cursorPosition.value = 0;
     scrollPosition.value = 0;
   }
@@ -247,10 +276,34 @@ export const useEditorStore = defineStore("editor", () => {
     content.value += text;
   }
 
+  /** 更新章节标题（由顶部固定标题栏输入）：同步更新内容首行 H1，并触发保存 */
+  function updateChapterTitle(title: string) {
+    if (!currentChapter.value) return;
+    const clean = title.trim();
+    chapterTitle.value = clean;
+    if (!clean) return;
+    const lines = content.value.split("\n");
+    const idx = lines.findIndex((l) => l.trim().length > 0);
+    let newContent: string;
+    if (idx >= 0 && /^\s*#\s+/.test(lines[idx])) {
+      // 首行已是 H1：替换标题，保留正文
+      lines[idx] = `# ${clean}`;
+      newContent = lines.join("\n");
+    } else {
+      // 无 H1：在开头插入标题
+      newContent = `# ${clean}\n\n${content.value}`;
+    }
+    if (newContent !== content.value) {
+      // 直接赋值（标题变更不算写作字数），触发 isModified → 自动保存
+      content.value = newContent;
+    }
+  }
+
   function closeChapter() {
     currentChapter.value = null;
     content.value = "";
     lastSavedContent.value = "";
+    chapterTitle.value = "";
     cursorPosition.value = 0;
     scrollPosition.value = 0;
   }
@@ -258,6 +311,7 @@ export const useEditorStore = defineStore("editor", () => {
   return {
     currentChapter,
     content,
+    chapterTitle,
     isSaving,
     lastSavedContent,
     isModified,
@@ -273,6 +327,7 @@ export const useEditorStore = defineStore("editor", () => {
     updateScroll,
     saveChapter,
     createChapter,
+    updateChapterTitle,
     setContent,
     insertContent,
     closeChapter,

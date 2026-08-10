@@ -1,5 +1,8 @@
 <template>
-  <el-dialog v-model="visible" title="📈 剧情节奏检测" width="560px" append-to-body>
+  <el-dialog v-model="visible" width="560px" append-to-body>
+    <template #header>
+      <span class="dlg-title"><el-icon><Icon icon="lucide:activity" /></el-icon> 剧情节奏检测</span>
+    </template>
     <template v-if="report">
       <!-- 评分 -->
       <div class="rc-score">

@@ -1,5 +1,8 @@
 <template>
-  <el-dialog v-model="visible" title="🔍 全书问答检索" width="660px" append-to-body>
+  <el-dialog v-model="visible" width="660px" append-to-body>
+    <template #header>
+      <span class="dlg-title"><el-icon><Icon icon="lucide:message-circle-question-mark" /></el-icon> 全书问答检索</span>
+    </template>
     <!-- 提示 / 索引状态 -->
     <div v-if="!result" class="qa-tip">
       <p>基于全书语义检索的问答：输入问题，AI 会从所有章节中召回相关片段回答，并给出章节溯源。</p>
@@ -8,16 +11,20 @@
         正在构建全文索引…
       </p>
       <p v-else-if="qaStore.blockCount" class="qa-index">
-        ✅ 已索引 {{ qaStore.chapterCount }} 章 / {{ qaStore.blockCount }} 个片段，可以提问了
+        <el-icon><Icon icon="lucide:circle-check" /></el-icon>
+        已索引 {{ qaStore.chapterCount }} 章 / {{ qaStore.blockCount }} 个片段，可以提问了
       </p>
-      <p v-else class="qa-index warn">⚠️ 当前小说还没有可检索的章节</p>
+      <p v-else class="qa-index warn">
+        <el-icon><Icon icon="lucide:alert-triangle" /></el-icon>
+        当前小说还没有可检索的章节
+      </p>
     </div>
 
     <!-- 回答结果 -->
     <div v-if="result" class="qa-result">
       <div class="qa-answer">{{ result.answer }}</div>
       <div v-if="result.sources.length" class="qa-sources">
-        <h4>📌 参考资料（点击打开对应章节）</h4>
+        <h4><el-icon><Icon icon="lucide:pin" /></el-icon> 参考资料（点击打开对应章节）</h4>
         <div
           v-for="(s, i) in result.sources"
           :key="i"

@@ -7,7 +7,7 @@
       data-tauri-drag-region
     >
       <div class="header-left">
-        <span class="app-logo">✍️ AI 小说创作工具</span>
+        <span class="app-logo"><Icon icon="lucide:pen-line" :width="16" :height="16" /> AI 小说创作工具</span>
       </div>
       <div class="header-center">
         <template v-if="projectStore.hasProject">
@@ -301,6 +301,9 @@ onBeforeUnmount(() => {
 }
 
 .app-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 15px;
   font-weight: 600;
   color: var(--text-1);

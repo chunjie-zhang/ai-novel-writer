@@ -1,5 +1,8 @@
 <template>
-  <el-dialog v-model="visible" title="✏️ Diff 增量改写" width="720px">
+  <el-dialog v-model="visible" width="720px">
+    <template #header>
+      <span class="dlg-title"><el-icon><Icon icon="lucide:git-compare" /></el-icon> Diff 增量改写</span>
+    </template>
     <div class="diff-dialog">
       <div class="diff-input">
         <el-input v-model="instruction" placeholder="输入改写要求（如：让对话更生动、增加环境描写、改成古风文风）" />
@@ -26,13 +29,13 @@
           </span>
           <div class="diff-actions">
             <el-button size="small" type="success" @click="handleAccept" :disabled="currentDiff.status !== 'pending'">
-              ✅ 采纳
+              <el-icon><Icon icon="lucide:check" /></el-icon> 采纳
             </el-button>
             <el-button size="small" type="danger" @click="handleReject" :disabled="currentDiff.status !== 'pending'">
-              ❌ 驳回
+              <el-icon><Icon icon="lucide:x" /></el-icon> 驳回
             </el-button>
             <el-button size="small" @click="handleAdjust" :disabled="currentDiff.status === 'rejected'">
-              ✏️ 微调
+              <el-icon><Icon icon="lucide:pen-line" /></el-icon> 微调
             </el-button>
           </div>
         </div>
@@ -126,14 +129,14 @@ function handleAccept() {
   );
   editorStore.setContent(result);
   currentDiff.value = acceptDiff(currentDiff.value);
-  statusLabel.value = "✅ 已采纳";
+  statusLabel.value = "已采纳";
   ElMessage.success("已采纳修改");
 }
 
 function handleReject() {
   if (!currentDiff.value) return;
   currentDiff.value = rejectDiff(currentDiff.value);
-  statusLabel.value = "❌ 已驳回";
+  statusLabel.value = "已驳回";
   ElMessage.info("已驳回修改");
 }
 
@@ -144,7 +147,7 @@ async function handleAdjust() {
   try {
     const response = await aiStore.sendMessage(prompt);
     currentDiff.value = adjustDiff(currentDiff.value, response);
-    statusLabel.value = "✏️ 已微调";
+    statusLabel.value = "已微调";
     ElMessage.success("微调完成");
   } catch (e) {
     ElMessage.error("微调失败: " + e);

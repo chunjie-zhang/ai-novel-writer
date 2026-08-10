@@ -1,10 +1,12 @@
 <template>
   <el-dialog
     :model-value="visible"
-    title="🕘 章节历史版本"
     width="940px"
     @update:model-value="$emit('update:visible', $event)"
   >
+    <template #header>
+      <span class="dlg-title"><el-icon><Icon icon="lucide:history" /></el-icon> 章节历史版本</span>
+    </template>
     <div class="version-dialog">
       <p class="version-tip">
         每次保存章节时，系统会自动留存一份历史快照（每章保留最近 10 个版本）。点击左侧版本，右侧会显示它与当前内容的差异对比。
@@ -64,8 +66,8 @@
           <!-- 左右并排对比：左=历史版本，右=当前内容，差异行对齐高亮 -->
           <div class="compare-panels">
             <div class="panel-head">
-              <span class="panel-title panel-left">📄 历史版本 · #{{ versionNoOf(selectedVersion) }} · {{ formatTime(selectedVersion.timestamp) }}</span>
-              <span class="panel-title panel-right">✍️ 当前内容</span>
+              <span class="panel-title panel-left"><Icon icon="lucide:file-text" :width="14" :height="14" style="vertical-align:-2px" /> 历史版本 · #{{ versionNoOf(selectedVersion) }} · {{ formatTime(selectedVersion.timestamp) }}</span>
+              <span class="panel-title panel-right"><Icon icon="lucide:pen-line" :width="14" :height="14" style="vertical-align:-2px" /> 当前内容</span>
             </div>
             <div class="panel-body">
               <div

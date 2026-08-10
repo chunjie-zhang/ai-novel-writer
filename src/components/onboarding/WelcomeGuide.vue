@@ -10,7 +10,7 @@
   >
     <template #header>
       <div class="wg-header">
-        <span class="wg-logo">✍️</span>
+        <span class="wg-logo"><Icon icon="lucide:pen-line" :width="18" :height="18" /></span>
         <span>AI 小说创作工具 · 新手引导</span>
       </div>
     </template>
@@ -44,9 +44,9 @@
             <span>示例项目「星辰之旅」将包含：</span>
           </div>
           <ul class="wg-demo-list">
-            <li>📖 3 个示例章节（第一卷分组）</li>
-            <li>👤 3 个示例角色（陆沉、苏念薇、老船长）</li>
-            <li>🌍 完整的世界观设定（势力 / 规则 / 地理）</li>
+            <li><el-icon><Icon icon="lucide:book-open" /></el-icon> 3 个示例章节（第一卷分组）</li>
+            <li><el-icon><Icon icon="lucide:user" /></el-icon> 3 个示例角色（陆沉、苏念薇、老船长）</li>
+            <li><el-icon><Icon icon="lucide:globe" /></el-icon> 完整的世界观设定（势力 / 规则 / 地理）</li>
           </ul>
           <el-button
             type="primary"

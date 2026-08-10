@@ -3,7 +3,7 @@
     <!-- 无项目时的欢迎页 -->
     <div v-if="!projectStore.hasProject" class="welcome">
       <div class="welcome-content">
-        <div class="welcome-icon">✍️</div>
+        <div class="welcome-icon"><Icon icon="lucide:pen-line" :width="48" :height="48" /></div>
         <h1>AI 小说创作工具</h1>
         <p class="welcome-desc">
           专为长篇网文创作者设计的桌面端工具<br />
@@ -146,6 +146,17 @@
 
         <!-- Milkdown 富文本编辑器 -->
         <div v-else class="milkdown-wrapper">
+          <!-- 顶部固定章节标题栏 -->
+          <div class="chapter-title-bar">
+            <span v-if="chapterNo" class="ctb-no">第{{ chapterNo }}章</span>
+            <el-input
+              v-model="titleDraft"
+              placeholder="请输入标题"
+              size="large"
+              class="ctb-input"
+              @change="commitTitle"
+            />
+          </div>
           <MilkdownEditor
             ref="milkdownEditorRef"
             :model-value="editorStore.content"
@@ -165,8 +176,35 @@
     </template>
 
     <!-- 新建章节对话框 -->
-    <el-dialog v-model="showNewChapter" title="新建章节" width="400px">
-      <el-input v-model="newChapterTitle" placeholder="输入章节名称" />
+    <el-dialog v-model="showNewChapter" title="新建章节" width="420px">
+      <el-form label-width="56px" @submit.prevent="handleCreateChapter">
+        <el-form-item label="章节名">
+          <el-input
+            v-model="newChapterTitle"
+            placeholder="输入章节名称，如：第1章 天启城"
+            @keyup.enter="handleCreateChapter"
+          />
+        </el-form-item>
+        <el-form-item label="分组">
+          <el-select
+            v-model="newChapterGroup"
+            placeholder="不选则放到根目录"
+            clearable
+            filterable
+            allow-create
+            default-first-option
+            style="width: 100%"
+          >
+            <el-option
+              v-for="g in existingChapterGroups"
+              :key="g"
+              :label="g"
+              :value="g"
+            />
+          </el-select>
+          <div class="form-tip">也可在章节名里直接写「分组/章节名」，如：第一卷/第1章 天启城</div>
+        </el-form-item>
+      </el-form>
       <template #footer>
         <el-button @click="showNewChapter = false">取消</el-button>
         <el-button type="primary" @click="handleCreateChapter">创建</el-button>
@@ -241,7 +279,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onBeforeUnmount } from "vue";
+import { ref, computed, watch, nextTick, onBeforeUnmount } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { invoke } from "@tauri-apps/api/core";
 import { useProjectStore } from "@/stores/project";
@@ -271,6 +309,14 @@ const showDedupDialog = ref(false);
 const showVersionHistoryDialog = ref(false);
 const showOutlineToTextDialog = ref(false);
 const newChapterTitle = ref("");
+const newChapterGroup = ref("");
+// 当前项目已有的分组（含已创建的空卷，供下拉选择）
+const existingChapterGroups = computed(() => {
+  const set = new Set<string>();
+  for (const c of projectStore.chapters) if (c.group) set.add(c.group);
+  for (const g of projectStore.groups) if (g) set.add(g);
+  return Array.from(set);
+});
 const hasSelection = ref(false);
 const milkdownEditorRef = ref<InstanceType<typeof MilkdownEditor> | null>(null);
 const showGoalDialog = ref(false);
@@ -400,6 +446,28 @@ function handleCursorUpdate(pos: number, scroll: number) {
   editorStore.updateScroll(scroll);
 }
 
+// ===== 顶部固定章节标题栏 =====
+const titleDraft = ref("");
+// 章号：从标题提取「第N章」；无则返回空（隐藏前缀）
+const chapterNo = computed(() => {
+  const m = editorStore.chapterTitle.match(/第(\d+)章/);
+  return m ? m[1] : "";
+});
+// 标题栏输入框内容 = 章节标题去掉「第N章」前缀
+watch(
+  () => editorStore.chapterTitle,
+  (t) => {
+    titleDraft.value = (t || "").replace(/^第\d+章\s*/, "");
+  },
+  { immediate: true }
+);
+/** 提交标题：合成「第N章 标题」并写入内容首行（触发保存） */
+function commitTitle() {
+  const t = titleDraft.value.trim();
+  const full = chapterNo.value ? `第${chapterNo.value}章 ${t}` : t;
+  editorStore.updateChapterTitle(full);
+}
+
 // 获取编辑器当前选中文本（通过 Milkdown 暴露的 ProseMirror 选区能力）
 // 点击菜单/工具栏按钮会导致编辑器失焦、实时选区读不到，因此回退到选区缓存
 let lastSelectionText = "";
@@ -475,17 +543,39 @@ async function autoSave() {
   }
 }
 
+/** 计算全书下一个章节编号（全局递增，跨卷不重置） */
+function nextChapterNumber(): number {
+  let max = 0;
+  for (const c of projectStore.chapters) {
+    const m = c.title.match(/第(\d+)章/);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  return max + 1;
+}
+
 function handleNewChapter() {
-  newChapterTitle.value = "";
+  // 自动预填下一个全局章节编号（如已有第1章则预填「第2章 」）
+  newChapterTitle.value = `第${nextChapterNumber()}章 `;
+  newChapterGroup.value = "";
   showNewChapter.value = true;
 }
 
 async function handleCreateChapter() {
-  if (!newChapterTitle.value.trim() || !projectStore.currentProject) return;
-  await editorStore.createChapter(
-    projectStore.currentProject.id,
-    newChapterTitle.value.trim()
-  );
+  const raw = newChapterTitle.value.trim();
+  if (!raw || !projectStore.currentProject) return;
+  let title = raw;
+  let group = newChapterGroup.value.trim();
+  // 兼容在章节名里直接写「分组/章节名」：自动拆分分组与标题
+  const slash = raw.indexOf("/");
+  if (slash > 0 && !group) {
+    group = raw.slice(0, slash).trim();
+    title = raw.slice(slash + 1).trim();
+  }
+  if (!title) {
+    ElMessage.warning("请输入章节名称");
+    return;
+  }
+  await editorStore.createChapter(projectStore.currentProject.id, title, group);
   showNewChapter.value = false;
   // 刷新项目结构，让左侧章节列表立即显示新章节
   try {
@@ -632,7 +722,7 @@ async function handleOutlineDetail() {
   try {
     const prompt = `请将以下章节内容拆解为详细写作提纲（细纲）。\n\n章节内容：\n${content.slice(0, 3000)}\n\n请输出：\n1. 场景划分（3-5个场景，标注地点和人物）\n2. 每个场景的剧情目标\n3. 关键对话要点\n4. 情绪曲线设计\n5. 字数分配建议`;
     const resp = await aiStore.sendMessage(prompt);
-    ElMessageBox.alert(resp, "📋 细纲生成结果");
+    ElMessageBox.alert(resp, "细纲生成结果");
   } catch (e) {
     ElMessage.error("生成失败: " + e);
   }
@@ -696,7 +786,7 @@ async function handleMultiAgent() {
     if (polishResult.status === "fulfilled") parts.push(`【文笔润色】\n${polishResult.value.slice(0, 300)}`);
     if (logicResult.status === "fulfilled") parts.push(`【逻辑纠错】\n${logicResult.value.slice(0, 300)}`);
 
-    ElMessageBox.alert(parts.join("\n\n---\n\n"), "🤖 多智能体分析报告");
+    ElMessageBox.alert(parts.join("\n\n---\n\n"), "多智能体分析报告");
   } catch (e) {
     ElMessage.error("分析失败: " + e);
   }
@@ -791,6 +881,13 @@ function createNewProject() {
   font-weight: normal;
 }
 
+.form-tip {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
 .toolbar-right {
   display: flex;
   align-items: center;
@@ -829,6 +926,47 @@ function createNewProject() {
   flex: 1;
   overflow: hidden;
   position: relative;
+  min-height: 0;
+}
+
+/* 编辑器内容区：标题栏固定，正文独立滚动 */
+.milkdown-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* 顶部固定章节标题栏 */
+.chapter-title-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg-2);
+  flex-shrink: 0;
+  z-index: 6;
+}
+.ctb-no {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.ctb-input {
+  flex: 1;
+}
+.ctb-input :deep(.el-input__inner) {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.milkdown-wrapper :deep(.milkdown-editor) {
+  flex: 1;
+  height: auto;
+  min-height: 0;
 }
 
 .no-chapter-hint {

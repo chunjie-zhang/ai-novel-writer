@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
   extractChapterTitle,
+  normalizeChapterTitle,
   sanitizeChapterName,
   buildChapterFileName,
+  fixDirtyTitle,
 } from "../chapterTitle";
 
 describe("章节标题提取与文件名构建", () => {
@@ -43,5 +45,35 @@ describe("章节标题提取与文件名构建", () => {
 
   it("标题被清空后使用兜底名", () => {
     expect(buildChapterFileName("///", "")).toMatch(/^chapter_\d+\.md$/);
+  });
+
+  it("normalize 去掉 Markdown 标记", () => {
+    expect(normalizeChapterTitle("# 第1章 初入江湖")).toBe("第1章 初入江湖");
+  });
+
+  it("normalize 去掉路径前缀（分组标题取最后一段）", () => {
+    expect(normalizeChapterTitle("第一卷/第1章 天启城")).toBe("第1章 天启城");
+    expect(normalizeChapterTitle("第一卷/第二卷/第3章 再见")).toBe("第3章 再见");
+  });
+
+  it("normalize 去掉扩展名", () => {
+    expect(normalizeChapterTitle("第1章 天启城.md")).toBe("第1章 天启城");
+    expect(normalizeChapterTitle("第一卷/第1章 天.md")).toBe("第1章 天");
+  });
+
+  it("normalize 空值返回空", () => {
+    expect(normalizeChapterTitle("")).toBe("");
+    expect(normalizeChapterTitle("###")).toBe("");
+  });
+
+  it("fixDirtyTitle 修复带路径/.md 的脏标题", () => {
+    expect(fixDirtyTitle("# 第一卷/第1章 天启城.md\n\n正文")).toBe("# 第1章 天启城\n\n正文");
+    expect(fixDirtyTitle("# 第3章 天启城.md\n正文")).toBe("# 第3章 天启城\n正文");
+  });
+
+  it("fixDirtyTitle 干净标题/无标题不改动", () => {
+    const clean = "# 第1章 天启城\n\n正文";
+    expect(fixDirtyTitle(clean)).toBe(clean);
+    expect(fixDirtyTitle("正文直接开始\n第二行")).toBe("正文直接开始\n第二行");
   });
 });

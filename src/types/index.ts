@@ -106,6 +106,8 @@ export interface Faction {
 export interface ProjectStructure {
   project: NovelProject;
   chapters: ChapterInfo[];
+  /** 已创建的卷分组目录名（含空卷） */
+  groups: string[];
   characters: Character[];
   world_setting: WorldSetting;
   memories: MemorySummary[];

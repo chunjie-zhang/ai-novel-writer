@@ -225,8 +225,18 @@ pub fn get_project_structure(app_handle: tauri::AppHandle, project_id: String) -
     // 读取章节列表（递归扫描，支持子文件夹分组）
     let chapters_dir = project_dir.join("chapters");
     let mut chapters = vec![];
+    let mut groups: Vec<String> = vec![];
     if chapters_dir.exists() {
         collect_chapters(&chapters_dir, "", &mut chapters)?;
+        // 收集已创建的卷分组目录（含空目录，供左侧展示空卷）
+        if let Ok(entries) = fs::read_dir(&chapters_dir) {
+            for entry in entries.flatten() {
+                if entry.path().is_dir() {
+                    groups.push(entry.file_name().to_string_lossy().to_string());
+                }
+            }
+        }
+        groups.sort();
     }
 
     // 读取角色
@@ -270,6 +280,7 @@ pub fn get_project_structure(app_handle: tauri::AppHandle, project_id: String) -
     Ok(ProjectStructure {
         project,
         chapters,
+        groups,
         characters,
         world_setting,
         memories,

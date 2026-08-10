@@ -74,7 +74,10 @@
 
       <!-- 已选技能提示 -->
       <div v-if="skillStore.activeSkill" class="active-skill-banner">
-        <span class="as-emoji">{{ skillStore.activeSkill.emoji }}</span>
+        <span class="as-emoji">
+          <Icon v-if="activeSkillIcon" :icon="activeSkillIcon" :width="20" :height="20" />
+          <span v-else>{{ skillStore.activeSkill.emoji }}</span>
+        </span>
         <div class="as-info">
           <span class="as-name">{{ skillStore.activeSkill.name }}</span>
           <span class="as-desc">{{ skillStore.activeSkill.description }}</span>
@@ -88,11 +91,11 @@
     <!-- 对话消息列表 -->
     <div class="chat-messages" ref="messagesRef">
       <div v-if="aiStore.messages.length === 0" class="chat-hint">
-        <div class="hint-icon">🤖</div>
+        <div class="hint-icon"><Icon icon="lucide:bot" :width="44" :height="44" /></div>
         <p>AI 创作助手</p>
         <p class="hint-sub">
           <template v-if="skillStore.activeSkill">
-            当前技能：{{ skillStore.activeSkill.emoji }} {{ skillStore.activeSkill.name }}
+            当前技能：<Icon v-if="activeSkillIcon" :icon="activeSkillIcon" :width="14" :height="14" style="vertical-align:-2px" /> {{ skillStore.activeSkill.name }}
           </template>
           <template v-else>
             选择技能或直接输入需求<br />
@@ -154,7 +157,7 @@
       <!-- 技能状态条 -->
       <div v-if="skillStore.activeSkill" class="skill-status">
         <el-tag size="small" type="success" effect="light" closable @close="skillStore.selectSkill(null)">
-          {{ skillStore.activeSkill.emoji }} {{ skillStore.activeSkill.name }}
+          <Icon v-if="activeSkillIcon" :icon="activeSkillIcon" :width="14" :height="14" style="vertical-align:-2px" /> {{ skillStore.activeSkill.name }}
         </el-tag>
       </div>
       <el-input
@@ -186,7 +189,10 @@
     <NovelImportDialog v-model:visible="showImport" @confirm="handleImportConfirm" />
 
     <!-- 人设校验结果对话框 -->
-    <el-dialog v-model="showOOCDialog" title="👤 人设校验提醒" width="480px" :close-on-click-modal="false">
+    <el-dialog v-model="showOOCDialog" width="480px" :close-on-click-modal="false">
+      <template #header>
+        <span class="dlg-title"><el-icon><Icon icon="lucide:user" /></el-icon> 人设校验提醒</span>
+      </template>
       <div class="ooc-content">
         <el-alert
           title="检测到可能的人设不一致"
@@ -246,9 +252,12 @@ import NovelImportDialog from "@/components/novel/NovelImportDialog.vue";
 import { useProjectStore } from "@/stores/project";
 import { useEditorStore } from "@/stores/editor";
 import { buildSmartContext } from "@/utils/nlp";
+import { normalizeChapterTitle } from "@/utils/chapterTitle";
 
 const aiStore = useAIStore();
 const skillStore = useSkillStore();
+// 当前技能图标（lucide 图标，缺省回退 emoji）
+const activeSkillIcon = computed(() => skillStore.activeSkill?.icon || null);
 const refStore = useReferenceStore();
 const writingStore = useWritingStore();
 const projectStore = useProjectStore();
@@ -426,7 +435,8 @@ async function saveAsChapter(msg: any) {
     return;
   }
   pendingChapterMsg.value = msg;
-  chapterForm.title = extractChapterTitle(content) || "";
+  // 规范化标题：去掉 # / 分组路径 / .md，得到纯标题
+  chapterForm.title = normalizeChapterTitle(extractChapterTitle(content));
   chapterForm.group = "";
   showChapterDialog.value = true;
 }
@@ -435,7 +445,7 @@ async function saveAsChapter(msg: any) {
 async function confirmSaveChapter() {
   const projectId = projectStore.currentProject?.id;
   if (!projectId || !pendingChapterMsg.value) return;
-  const raw = chapterForm.title.trim();
+  const raw = normalizeChapterTitle(chapterForm.title.trim());
   if (!raw) {
     ElMessage.warning("请输入章节标题");
     return;
@@ -626,8 +636,15 @@ async function scrollToBottom() {
 }
 
 .hint-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 14px;
+  border-radius: 24px;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .chat-hint p {

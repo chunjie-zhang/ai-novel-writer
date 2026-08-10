@@ -12,6 +12,41 @@ export function extractChapterTitle(content: string): string | null {
   return m ? m[1].trim() : null;
 }
 
+/**
+ * 规范化章节标题，得到「纯标题」（与左侧/文件名一致）：
+ * - 去掉 Markdown 标题标记（#）
+ * - 去掉分组路径前缀（若含 "/"，取最后一段，避免把路径写进标题）
+ * - 去掉 .md / .markdown / .txt 扩展名
+ */
+export function normalizeChapterTitle(raw: string): string {
+  let t = (raw || "").trim();
+  if (!t) return "";
+  t = t.replace(/^#+\s*/, "");
+  if (t.includes("/")) {
+    t = t.split("/").pop() || t;
+  }
+  t = t.replace(/\.(md|markdown|txt)$/i, "");
+  return t.trim();
+}
+
+/**
+ * 检测并修复内容首行的「脏标题」（含分组路径 "/" 或 .md 扩展名），
+ * 返回修复后的内容；首行不是 Markdown 标题或标题干净时原样返回。
+ */
+export function fixDirtyTitle(content: string): string {
+  const lines = content.split("\n");
+  const idx = lines.findIndex((l) => l.trim().length > 0);
+  if (idx < 0) return content;
+  const m = lines[idx].match(/^\s*#\s+(.+?)\s*$/);
+  if (!m) return content;
+  const raw = m[1].trim();
+  if (!raw.includes("/") && !/\.(md|markdown|txt)$/i.test(raw)) return content;
+  const clean = normalizeChapterTitle(raw);
+  if (!clean || clean === raw) return content;
+  lines[idx] = `# ${clean}`;
+  return lines.join("\n");
+}
+
 /** 与 Rust save_chapter 一致的文件名清理（保留中文/英文/数字/空格/-/_） */
 export function sanitizeChapterName(title: string): string {
   return title.replace(/[^\u4e00-\u9fa5A-Za-z0-9 \-_]/g, "").trim();

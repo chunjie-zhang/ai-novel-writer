@@ -1,5 +1,8 @@
 <template>
-  <el-dialog v-model="visible" title="📊 写作进度报表" width="620px">
+  <el-dialog v-model="visible" width="620px">
+    <template #header>
+      <span class="dlg-title"><el-icon><Icon icon="lucide:bar-chart-3" /></el-icon> 写作进度报表</span>
+    </template>
     <div class="report">
       <!-- 总览卡片 -->
       <div class="overview-cards">

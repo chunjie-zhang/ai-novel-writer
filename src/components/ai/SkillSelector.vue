@@ -31,7 +31,7 @@
         effect="plain"
         @click="skillStore.setCategory(cat.key)"
       >
-        {{ cat.emoji }} {{ cat.label }}
+        <el-icon :size="14" style="vertical-align: -2px"><Icon :icon="cat.icon" /></el-icon> {{ cat.label }}
         <span class="cat-count">{{ cat.count }}</span>
       </el-tag>
     </div>
@@ -44,7 +44,9 @@
 
       <template v-for="(skills, category) in skillStore.categorizedSkills" :key="category">
         <div v-if="!skillStore.activeCategory" class="ss-group-label">
-          {{ SKILL_CATEGORIES[category as keyof typeof SKILL_CATEGORIES]?.emoji }}
+          <el-icon :size="14" style="vertical-align: -2px">
+            <Icon :icon="SKILL_CATEGORIES[category as keyof typeof SKILL_CATEGORIES]?.icon" />
+          </el-icon>
           {{ SKILL_CATEGORIES[category as keyof typeof SKILL_CATEGORIES]?.label }}
         </div>
 
@@ -55,7 +57,10 @@
           :class="{ active: skillStore.activeSkillId === skill.id }"
           @click="skillStore.selectSkill(skill.id)"
         >
-          <div class="ss-item-icon">{{ skill.emoji }}</div>
+          <div class="ss-item-icon">
+            <Icon v-if="skill.icon" :icon="skill.icon" :width="22" :height="22" />
+            <span v-else>{{ skill.emoji }}</span>
+          </div>
           <div class="ss-item-body">
             <div class="ss-item-name">{{ skill.name }}</div>
             <div class="ss-item-desc">{{ skill.description }}</div>
@@ -78,6 +83,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from "@iconify/vue";
 import { useSkillStore } from "@/skills/store";
 import { SKILL_CATEGORIES } from "@/skills/types";
 
@@ -157,6 +163,9 @@ const skillStore = useSkillStore();
   line-height: 1;
   flex-shrink: 0;
   padding-top: 2px;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
 }
 
 .ss-item-body {

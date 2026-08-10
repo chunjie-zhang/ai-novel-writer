@@ -18,6 +18,8 @@ pub fn run() {
             commands::read_chapter,
             commands::delete_chapter,
             commands::rename_chapter,
+            commands::create_group,
+            commands::delete_group,
             commands::call_ai,
             commands::call_ai_stream,
             commands::save_memory,

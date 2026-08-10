@@ -1,7 +1,7 @@
 <template>
   <div class="outline-panel">
     <div class="op-header">
-      <span class="op-title">📋 三级大纲</span>
+      <span class="op-title"><el-icon><Icon icon="lucide:list-ordered" /></el-icon> 三级大纲</span>
       <div class="op-actions">
         <el-button size="small" @click="handleInitOutline" v-if="!outlineStore.hasOutline">
           初始化大纲
@@ -23,7 +23,7 @@
       <!-- 书名节点 -->
       <div class="tree-node book-node">
         <div class="node-content" @click="editingId = outlineStore.outline?.id || ''">
-          <span class="node-icon">📖</span>
+          <span class="node-icon"><Icon icon="lucide:book-open" :width="16" :height="16" /></span>
           <el-input
             v-if="editingId === outlineStore.outline?.id"
             v-model="outlineStore.outline.title"
@@ -40,7 +40,7 @@
         <div class="tree-node volume-node">
           <div class="node-content" @click="outlineStore.toggleCollapse(vol.id)">
             <span class="node-collapse">{{ vol.collapsed ? '▶' : '▼' }}</span>
-            <span class="node-icon">📂</span>
+            <span class="node-icon"><Icon icon="lucide:folder" :width="16" :height="16" /></span>
             <el-input
               v-if="editingId === vol.id"
               v-model="vol.title"
@@ -64,7 +64,7 @@
         <div v-if="!vol.collapsed" class="chapter-list">
           <div v-for="ch in vol.children" :key="ch.id" class="tree-node chapter-node" :class="{ linked: ch.link }">
             <div class="node-content" @click="handleChapterClick(ch)" style="cursor:pointer">
-              <span class="node-icon">📄</span>
+              <span class="node-icon"><Icon icon="lucide:file-text" :width="16" :height="16" /></span>
               <el-input
                 v-if="editingId === ch.id"
                 v-model="ch.title"
@@ -78,7 +78,7 @@
             <div class="node-meta">
               <span class="node-words" v-if="ch.targetWords">目标 {{ ch.targetWords }}字</span>
               <el-tooltip content="关联到编辑器章节" placement="top">
-                <el-button text size="small" @click.stop="handleLinkChapter(ch)">🔗</el-button>
+                <el-button text size="small" @click.stop="handleLinkChapter(ch)"><el-icon><Icon icon="lucide:link" /></el-icon></el-button>
               </el-tooltip>
               <el-button text size="small" type="danger" @click.stop="outlineStore.removeNode(ch.id)">
                 ✕

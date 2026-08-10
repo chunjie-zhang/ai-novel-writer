@@ -4,13 +4,13 @@
       <el-form-item label="主题外观">
         <el-radio-group v-model="mode" @change="handleChange" class="theme-radio-group">
           <el-radio-button value="system">
-            <span class="theme-option">🖥️ 跟随系统</span>
+            <span class="theme-option"><Icon icon="lucide:monitor" :width="14" :height="14" style="vertical-align:-2px" /> 跟随系统</span>
           </el-radio-button>
           <el-radio-button value="light">
-            <span class="theme-option">☀️ 白天</span>
+            <span class="theme-option"><Icon icon="lucide:sun" :width="14" :height="14" style="vertical-align:-2px" /> 白天</span>
           </el-radio-button>
           <el-radio-button value="dark">
-            <span class="theme-option">🌙 黑夜</span>
+            <span class="theme-option"><Icon icon="lucide:moon" :width="14" :height="14" style="vertical-align:-2px" /> 黑夜</span>
           </el-radio-button>
         </el-radio-group>
         <div class="form-hint">

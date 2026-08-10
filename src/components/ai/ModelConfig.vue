@@ -37,13 +37,13 @@
           <el-radio-group v-model="aiStore.builtinVariant">
             <el-radio value="deepseek-v4-flash">
               <div class="radio-label">
-                <span class="label-title">DeepSeek V4 Flash ⚡</span>
+                <span class="label-title">DeepSeek V4 Flash <el-icon style="vertical-align:-2px"><Icon icon="lucide:zap" /></el-icon></span>
                 <span class="label-desc">快速创作 · 日常续写 · 性价比高</span>
               </div>
             </el-radio>
             <el-radio value="deepseek-v4-pro">
               <div class="radio-label">
-                <span class="label-title">DeepSeek V4 Pro 🧠</span>
+                <span class="label-title">DeepSeek V4 Pro <el-icon style="vertical-align:-2px"><Icon icon="lucide:brain" /></el-icon></span>
                 <span class="label-desc">深度推理 · 复杂剧情 · 人设打磨</span>
               </div>
             </el-radio>
@@ -210,15 +210,15 @@ async function handleTest() {
   isTesting.value = true;
   try {
     const reply = await aiStore.testConnection();
-    ElMessage.success(`✅ 连接成功！模型回复：${reply.slice(0, 30)}`);
+    ElMessage.success(`连接成功！模型回复：${reply.slice(0, 30)}`);
   } catch (e: any) {
     const msg = String(e);
     if (msg.includes("401")) {
-      ElMessage.error("❌ 连接失败：API Key 无效或已过期（401）。请到 DeepSeek 平台核对 Key。");
+      ElMessage.error("连接失败：API Key 无效或已过期（401）。请到 DeepSeek 平台核对 Key。");
     } else if (msg.includes("404") || msg.includes("model")) {
-      ElMessage.error("❌ 连接失败：模型名或 Base URL 不正确，请检查配置。");
+      ElMessage.error("连接失败：模型名或 Base URL 不正确，请检查配置。");
     } else {
-      ElMessage.error("❌ 连接失败：" + msg.slice(0, 120));
+      ElMessage.error("连接失败：" + msg.slice(0, 120));
     }
   } finally {
     isTesting.value = false;

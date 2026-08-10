@@ -115,6 +115,8 @@ pub struct Faction {
 pub struct ProjectStructure {
     pub project: NovelProject,
     pub chapters: Vec<ChapterInfo>,
+    /// 已创建的卷分组目录名（含空卷，用于左侧展示空卷）
+    pub groups: Vec<String>,
     pub characters: Vec<Character>,
     pub world_setting: WorldSetting,
     pub memories: Vec<MemorySummary>,

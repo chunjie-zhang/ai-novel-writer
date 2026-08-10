@@ -15,6 +15,8 @@ export const useProjectStore = defineStore("project", () => {
 
   // 计算属性
   const chapters = computed(() => currentStructure.value?.chapters || []);
+  /** 已创建的卷分组目录名（含空卷） */
+  const groups = computed(() => currentStructure.value?.groups || []);
   const characters = computed(() => currentStructure.value?.characters || []);
   const worldSetting = computed(() => currentStructure.value?.world_setting || null);
   const memories = computed(() => currentStructure.value?.memories || []);
@@ -151,6 +153,7 @@ export const useProjectStore = defineStore("project", () => {
     currentStructure,
     isLoading,
     chapters,
+    groups,
     characters,
     worldSetting,
     memories,
