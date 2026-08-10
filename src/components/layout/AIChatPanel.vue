@@ -1,6 +1,6 @@
 <template>
   <div class="ai-chat-panel">
-    <div class="panel-header">
+    <div class="panel-header" data-tauri-drag-region="deep">
       <span class="panel-title">AI 对话助手</span>
       <div class="panel-actions">
         <el-tooltip content="导入参考小说" placement="bottom">
@@ -607,6 +607,13 @@ async function scrollToBottom() {
   justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
+  /* Windows/Linux 用：WebKit 专属拖拽（macOS 走 data-tauri-drag-region="deep"） */
+  -webkit-app-region: drag;
+}
+
+/* 头部按钮不被拖拽拦截 */
+.panel-header .el-button {
+  -webkit-app-region: no-drag;
 }
 
 .panel-title {

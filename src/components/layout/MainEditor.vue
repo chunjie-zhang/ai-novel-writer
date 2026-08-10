@@ -19,8 +19,8 @@
 
     <!-- 有项目的编辑器 -->
     <template v-else>
-      <!-- 编辑器工具栏 -->
-      <div class="editor-toolbar">
+      <!-- 编辑器工具栏（可拖拽窗口区域） -->
+      <div class="editor-toolbar" data-tauri-drag-region="deep">
         <div class="toolbar-left">
           <span v-if="editorStore.currentChapter" class="chapter-title-label">
             当前章节：{{ editorStore.currentChapter.title }}
@@ -35,6 +35,7 @@
               class="word-count daily"
               @click="handleDailyClick"
               style="cursor: pointer;"
+              data-tauri-drag-region="false"
             >
               <template v-if="writingStore.stats.dailyGoal.enabled">
                 今日 {{ writingStore.stats.writtenToday }}/{{ writingStore.stats.dailyGoal.targetWords }}
@@ -146,8 +147,8 @@
 
         <!-- Milkdown 富文本编辑器 -->
         <div v-else class="milkdown-wrapper">
-          <!-- 顶部固定章节标题栏 -->
-          <div class="chapter-title-bar">
+          <!-- 顶部固定章节标题栏（可拖拽窗口区域） -->
+          <div class="chapter-title-bar" data-tauri-drag-region="deep">
             <span v-if="chapterNo" class="ctb-no">第{{ chapterNo }}章</span>
             <el-input
               v-model="titleDraft"
@@ -857,6 +858,16 @@ function createNewProject() {
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--panel-bg-2);
+  /* Windows/Linux 用：WebKit 专属拖拽（macOS 走 data-tauri-drag-region="deep"） */
+  -webkit-app-region: drag;
+}
+
+/* 工具栏内可交互元素不被拖拽拦截 */
+.editor-toolbar :deep(.el-button),
+.editor-toolbar :deep(.el-input),
+.editor-toolbar :deep(input),
+.editor-toolbar [data-tauri-drag-region="false"] {
+  -webkit-app-region: no-drag;
 }
 
 .toolbar-left {
@@ -948,6 +959,13 @@ function createNewProject() {
   background: var(--panel-bg-2);
   flex-shrink: 0;
   z-index: 6;
+  /* Windows/Linux 用：WebKit 专属拖拽（macOS 走 data-tauri-drag-region="deep"） */
+  -webkit-app-region: drag;
+}
+/* 章节标题输入框不被拖拽拦截 */
+.chapter-title-bar :deep(.el-input),
+.chapter-title-bar :deep(input) {
+  -webkit-app-region: no-drag;
 }
 .ctb-no {
   font-size: 18px;

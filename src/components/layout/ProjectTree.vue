@@ -1,6 +1,6 @@
 <template>
   <div class="project-tree">
-    <div class="tree-header">
+    <div class="tree-header" data-tauri-drag-region="deep">
       <span class="tree-title">项目列表</span>
       <div class="tree-header-actions">
         <el-tooltip content="大纲管理" placement="bottom">
@@ -567,6 +567,13 @@ async function handleWorldSave(world: any) {
   justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
+  /* Windows/Linux 用：WebKit 专属拖拽（macOS 走 data-tauri-drag-region="deep"） */
+  -webkit-app-region: drag;
+}
+
+/* 头部按钮不被拖拽拦截 */
+.tree-header .el-button {
+  -webkit-app-region: no-drag;
 }
 
 .tree-header-actions {

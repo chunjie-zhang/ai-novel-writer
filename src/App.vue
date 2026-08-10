@@ -4,7 +4,7 @@
     <header
       class="app-header"
       :class="{ 'is-mac': isMac }"
-      data-tauri-drag-region
+      data-tauri-drag-region="deep"
     >
       <div class="header-left">
         <span class="app-logo"><Icon icon="lucide:pen-line" :width="16" :height="16" /> AI 小说创作工具</span>
@@ -141,13 +141,38 @@ const defaultStoragePath = ref("");
 const leftPanelWidth = ref(280);
 const rightPanelWidth = ref(360);
 const resizing = ref<"left" | "right" | null>(null);
+/** 中间内容区最小宽度：拖拽时不允许把编辑器压缩到小于该值 */
+const MIN_CONTENT_WIDTH = 420;
+/** 左右两条拖拽分隔条总宽（5px × 2） */
+const HANDLES_WIDTH = 10;
+
+/** 左面板最大允许宽度：保证内容区 ≥ MIN_CONTENT_WIDTH */
+function maxLeftPanelWidth() {
+  return Math.max(
+    180,
+    window.innerWidth - MIN_CONTENT_WIDTH - rightPanelWidth.value - HANDLES_WIDTH
+  );
+}
+/** 右面板最大允许宽度：保证内容区 ≥ MIN_CONTENT_WIDTH */
+function maxRightPanelWidth() {
+  return Math.max(
+    240,
+    window.innerWidth - MIN_CONTENT_WIDTH - leftPanelWidth.value - HANDLES_WIDTH
+  );
+}
+function clampLeftPanel(w: number) {
+  return Math.min(Math.max(w, 180), Math.min(600, maxLeftPanelWidth()));
+}
+function clampRightPanel(w: number) {
+  return Math.min(Math.max(w, 240), Math.min(700, maxRightPanelWidth()));
+}
 
 function restorePanelWidths() {
   try {
     const l = Number(localStorage.getItem("panel-left-width"));
-    if (l >= 180 && l <= 600) leftPanelWidth.value = l;
+    if (Number.isFinite(l)) leftPanelWidth.value = clampLeftPanel(l);
     const r = Number(localStorage.getItem("panel-right-width"));
-    if (r >= 240 && r <= 700) rightPanelWidth.value = r;
+    if (Number.isFinite(r)) rightPanelWidth.value = clampRightPanel(r);
   } catch {}
 }
 
@@ -160,11 +185,11 @@ function startResize(side: "left" | "right", e: MouseEvent) {
 
 function onMouseMove(e: MouseEvent) {
   if (resizing.value === "left") {
-    const w = Math.min(Math.max(e.clientX, 180), 600);
+    const w = clampLeftPanel(e.clientX);
     leftPanelWidth.value = w;
     localStorage.setItem("panel-left-width", String(w));
   } else if (resizing.value === "right") {
-    const w = Math.min(Math.max(window.innerWidth - e.clientX, 240), 700);
+    const w = clampRightPanel(window.innerWidth - e.clientX);
     rightPanelWidth.value = w;
     localStorage.setItem("panel-right-width", String(w));
   }
@@ -175,6 +200,20 @@ function onMouseUp() {
     resizing.value = null;
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
+  }
+}
+
+/** 窗口尺寸变化时：收缩面板，保证中间内容区不被压缩到最小宽度以下 */
+function onWindowResize() {
+  const nl = clampLeftPanel(leftPanelWidth.value);
+  if (nl !== leftPanelWidth.value) {
+    leftPanelWidth.value = nl;
+    localStorage.setItem("panel-left-width", String(nl));
+  }
+  const nr = clampRightPanel(rightPanelWidth.value);
+  if (nr !== rightPanelWidth.value) {
+    rightPanelWidth.value = nr;
+    localStorage.setItem("panel-right-width", String(nr));
   }
 }
 
@@ -235,6 +274,7 @@ onMounted(async () => {
   restorePanelWidths();
   document.addEventListener("mousemove", onMouseMove);
   document.addEventListener("mouseup", onMouseUp);
+  window.addEventListener("resize", onWindowResize);
 
   // 首次启动：自动弹出新手引导（仅一次，之后可通过顶部 ? 按钮再次打开）
   if (!localStorage.getItem("novel-onboarding-done")) {
@@ -250,6 +290,7 @@ function handleGuideFinish() {
 onBeforeUnmount(() => {
   document.removeEventListener("mousemove", onMouseMove);
   document.removeEventListener("mouseup", onMouseUp);
+  window.removeEventListener("resize", onWindowResize);
 });
 </script>
 
@@ -409,7 +450,7 @@ onBeforeUnmount(() => {
 
 .main-content {
   flex: 1;
-  min-width: 0;
+  min-width: 420px;
   background: var(--panel-bg);
   margin: 0 1px;
 }
