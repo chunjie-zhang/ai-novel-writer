@@ -76,6 +76,7 @@ import { ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { invoke } from "@tauri-apps/api/core";
 import type { ChapterInfo } from "@/types";
+import { useVersionsStore } from "@/stores/versions";
 
 const visible = defineModel<boolean>("visible");
 
@@ -144,6 +145,7 @@ async function handleBatchDelete() {
         projectId: props.projectId,
         fileName: id,
       });
+      useVersionsStore().clearChapter(props.projectId, id);
     } catch (e) { console.error("删除章节失败:", e); }
   }
   selectedIds.value = [];

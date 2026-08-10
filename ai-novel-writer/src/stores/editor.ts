@@ -2,6 +2,12 @@ import { defineStore } from "pinia";
 import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import type { ChapterInfo } from "@/types";
+import { useVersionsStore } from "@/stores/versions";
+import { useProjectStore } from "@/stores/project";
+import {
+  extractChapterTitle,
+  buildChapterFileName,
+} from "@/utils/chapterTitle";
 
 const CURSOR_STORAGE_KEY = "novel-cursor-memory";
 
@@ -110,6 +116,53 @@ export const useEditorStore = defineStore("editor", () => {
     scrollPosition.value = pos;
   }
 
+  /** 保存章节并同步标题（若首行 Markdown 标题被修改，自动重命名文件并刷新左侧树） */
+  async function syncChapterTitleIfChanged(projectId: string) {
+    const chapter = currentChapter.value;
+    if (!chapter) return;
+
+    const newTitle = extractChapterTitle(content.value);
+    if (!newTitle || newTitle === chapter.title) return;
+
+    const oldFileName = chapter.file_name;
+    const newFileName = buildChapterFileName(newTitle, chapter.group || "");
+    if (newFileName === oldFileName) return;
+
+    try {
+      await invoke("rename_chapter", {
+        projectId,
+        oldName: oldFileName,
+        newName: newFileName,
+      });
+
+      // 迁移历史版本到新文件名
+      useVersionsStore().renameChapter(projectId, oldFileName, newFileName);
+
+      // 更新内存中的章节信息
+      chapter.title = newTitle;
+      chapter.file_name = newFileName;
+
+      // 迁移断稿记忆中的文件名
+      const mem = loadCursorMemory();
+      if (mem && mem.chapterFileName === oldFileName) {
+        mem.chapterFileName = newFileName;
+        saveCursorMemory(mem);
+      }
+
+      // 刷新左侧项目树（标题/文件名随之更新）
+      await useProjectStore().openProject(projectId);
+
+      // 通知 UI 标题已同步
+      window.dispatchEvent(
+        new CustomEvent("chapter-title-synced", { detail: newTitle })
+      );
+    } catch (e) {
+      console.error("同步章节标题失败:", e);
+      // 改名失败不阻断保存结果，仅提示
+      window.dispatchEvent(new CustomEvent("chapter-title-sync-error"));
+    }
+  }
+
   async function saveChapter(projectId: string) {
     if (!currentChapter.value || !isModified.value) return;
 
@@ -122,6 +175,16 @@ export const useEditorStore = defineStore("editor", () => {
         content: content.value,
       });
       lastSavedContent.value = content.value;
+
+      // 保存时自动记录章节历史版本
+      useVersionsStore().recordVersion(
+        projectId,
+        currentChapter.value.file_name,
+        content.value
+      );
+
+      // 保存时同步章节标题（首行 # 标题变更 → 重命名文件 + 刷新左侧树）
+      await syncChapterTitleIfChanged(projectId);
 
       // 保存时同时更新断稿记忆
       saveCursorMemory({
@@ -168,7 +231,16 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function setContent(newContent: string) {
+    const added = Math.max(
+      0,
+      newContent.replace(/\s/g, "").length - wordCount.value
+    );
     content.value = newContent;
+    // 仅当字数增加时上报「用户输入」增量；
+    // 打开章节 / 切换章节 / 新建章节直接设置 content，不经过这里，因此不会误计入日更字数。
+    if (added > 0) {
+      window.dispatchEvent(new CustomEvent("editor-user-input", { detail: added }));
+    }
   }
 
   function insertContent(text: string) {

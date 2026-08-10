@@ -128,9 +128,31 @@ export const useOutlineStore = defineStore("outline", () => {
     if (node) node.collapsed = !node.collapsed;
   }
 
-  /** 持久化保存大纲到 localStorage */
-  function saveOutline() {
-    localStorage.setItem("novel-outline", toJSON());
+  /** 持久化保存大纲到 localStorage（按项目隔离） */
+  function saveOutline(projectId: string) {
+    if (!outline.value) return;
+    localStorage.setItem(`novel-outline-${projectId}`, toJSON());
+  }
+
+  /** 加载指定项目的大纲（切换项目时调用，避免串数据） */
+  function loadOutline(projectId: string) {
+    const key = `novel-outline-${projectId}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try {
+        outline.value = JSON.parse(saved);
+      } catch (e) {
+        console.error("加载大纲失败:", e);
+        outline.value = null;
+      }
+    } else {
+      outline.value = null;
+    }
+  }
+
+  /** 清空当前大纲（切走项目时） */
+  function clearOutline() {
+    outline.value = null;
   }
 
   /** 序列化为可存储的 JSON */
@@ -160,6 +182,8 @@ export const useOutlineStore = defineStore("outline", () => {
     toJSON,
     fromJSON,
     saveOutline,
+    loadOutline,
+    clearOutline,
   };
 });
 

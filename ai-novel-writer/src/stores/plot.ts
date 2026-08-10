@@ -15,21 +15,32 @@ export interface PlotHole {
   resolved_at?: string;
 }
 
-const STORAGE_KEY = "novel-plot-holes";
+const STORAGE_PREFIX = "novel-plot-holes";
 
-function loadHoles(): PlotHole[] {
+function loadHoles(projectId: string): PlotHole[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(`${STORAGE_PREFIX}-${projectId}`);
     return raw ? JSON.parse(raw) : [];
   } catch { return []; }
 }
 
-function saveHoles(holes: PlotHole[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(holes));
+function saveHoles(projectId: string, holes: PlotHole[]) {
+  localStorage.setItem(`${STORAGE_PREFIX}-${projectId}`, JSON.stringify(holes));
 }
 
 export const usePlotStore = defineStore("plot", () => {
-  const holes = ref<PlotHole[]>(loadHoles());
+  const holes = ref<PlotHole[]>([]);
+  let currentProjectId = "";
+
+  /** 加载指定项目的伏笔（切换项目时调用，避免串数据） */
+  function loadForProject(projectId: string) {
+    currentProjectId = projectId;
+    holes.value = loadHoles(projectId);
+  }
+
+  function persist() {
+    if (currentProjectId) saveHoles(currentProjectId, holes.value);
+  }
 
   const unresolvedHoles = computed(() => holes.value.filter((h) => !h.resolved));
   const unresolvedCount = computed(() => unresolvedHoles.value.length);
@@ -40,7 +51,7 @@ export const usePlotStore = defineStore("plot", () => {
       id: `hole-${Date.now()}`,
       created_at: new Date().toISOString(),
     });
-    saveHoles(holes.value);
+    persist();
   }
 
   function resolveHole(id: string, chapter?: string) {
@@ -49,20 +60,20 @@ export const usePlotStore = defineStore("plot", () => {
       hole.resolved = true;
       hole.resolvedChapter = chapter;
       hole.resolved_at = new Date().toISOString();
-      saveHoles(holes.value);
+      persist();
     }
   }
 
   function removeHole(id: string) {
     holes.value = holes.value.filter((h) => h.id !== id);
-    saveHoles(holes.value);
+    persist();
   }
 
   function updateHole(id: string, data: Partial<PlotHole>) {
     const hole = holes.value.find((h) => h.id === id);
     if (hole) Object.assign(hole, data);
-    saveHoles(holes.value);
+    persist();
   }
 
-  return { holes, unresolvedHoles, unresolvedCount, addHole, resolveHole, removeHole, updateHole };
+  return { holes, unresolvedHoles, unresolvedCount, loadForProject, addHole, resolveHole, removeHole, updateHole };
 });

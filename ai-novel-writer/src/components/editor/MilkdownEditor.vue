@@ -1,21 +1,23 @@
 <template>
   <div class="milkdown-editor" v-loading="!ready">
     <MilkdownProvider>
-      <Milkdown v-if="ready" />
-      <div v-else class="editor-loading">编辑器加载中...</div>
+      <MilkdownEditorContent
+        ref="contentRef"
+        :model-value="modelValue"
+        @update:model-value="handleUpdate"
+        @cursor-update="handleCursorUpdate"
+        @ready="ready = true"
+      />
     </MilkdownProvider>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount } from "vue";
-import { MilkdownProvider, Milkdown, useEditor } from "@milkdown/vue";
-import { Editor, rootCtx, defaultValueCtx } from "@milkdown/core";
-import { commonmark } from "@milkdown/preset-commonmark";
-import { nord } from "@milkdown/theme-nord";
-import { listener, listenerCtx } from "@milkdown/plugin-listener";
+import { ref } from "vue";
+import { MilkdownProvider } from "@milkdown/vue";
+import MilkdownEditorContent from "./MilkdownEditorContent.vue";
 
-const props = defineProps<{
+defineProps<{
   modelValue: string;
 }>();
 
@@ -25,50 +27,25 @@ const emit = defineEmits<{
 }>();
 
 const ready = ref(false);
-let contentUpdateLock = false;
-let editorInstance: any = null;
+const contentRef = ref<InstanceType<typeof MilkdownEditorContent> | null>(null);
 
-// 使用 useEditor 创建编辑器实例
-useEditor((root) => {
-  editorInstance = (Editor.make() as any)
-    .config((ctx: any) => {
-      ctx.set(rootCtx, root);
-      ctx.set(defaultValueCtx, props.modelValue);
-      ctx.get(listenerCtx).markdownUpdated((_: any, markdown: string) => {
-        if (!contentUpdateLock) {
-          emit("update:modelValue", markdown);
-        }
-      });
-    })
-    .use(commonmark)
-    .use(nord)
-    .use(listener);
-  return editorInstance;
-});
+function handleUpdate(value: string) {
+  emit("update:modelValue", value);
+}
 
-// 监听外部内容变化，同步到编辑器
-watch(
-  () => props.modelValue,
-  (newVal) => {
-    if (editorInstance && newVal !== undefined) {
-      contentUpdateLock = true;
-      editorInstance.action((ctx: any) => {
-        ctx.set(defaultValueCtx, newVal);
-      });
-      // 下一帧释放锁，避免循环
-      requestAnimationFrame(() => { contentUpdateLock = false; });
-    }
-  }
-);
+function handleCursorUpdate(pos: number, scroll: number) {
+  emit("cursor-update", pos, scroll);
+}
 
-onMounted(() => {
-  // 编辑器实例创建后标记就绪
-  requestAnimationFrame(() => { ready.value = true; });
-});
+// 透传选区能力给 MainEditor
+function getSelectionText(): string {
+  return contentRef.value?.getSelectionText?.() ?? "";
+}
+function replaceSelection(newText: string) {
+  contentRef.value?.replaceSelection?.(newText);
+}
 
-onBeforeUnmount(() => {
-  editorInstance = null;
-});
+defineExpose({ getSelectionText, replaceSelection });
 </script>
 
 <style scoped>
@@ -79,15 +56,6 @@ onBeforeUnmount(() => {
   background: var(--panel-bg);
 }
 
-.editor-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-3);
-  font-size: 14px;
-}
-
 /* Milkdown 编辑器样式覆盖（深色阅读） */
 :deep(.milkdown) {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -96,6 +64,14 @@ onBeforeUnmount(() => {
   color: var(--text-1);
   max-width: 720px;
   margin: 0 auto;
+}
+
+/* ProseMirror 推荐：保持段落内换行与空格（消除控制台 white-space 警告） */
+:deep(.milkdown .ProseMirror) {
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 60vh;
+  outline: none;
 }
 
 :deep(.milkdown h1) {

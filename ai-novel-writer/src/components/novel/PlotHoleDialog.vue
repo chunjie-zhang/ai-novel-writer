@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { usePlotStore } from "@/stores/plot";
 import { useProjectStore } from "@/stores/project";
@@ -57,6 +57,13 @@ const visible = defineModel<boolean>("visible");
 const plotStore = usePlotStore();
 const projectStore = useProjectStore();
 const aiStore = useAIStore();
+
+// 打开对话框时加载当前项目的伏笔（按项目隔离，避免切换小说串数据）
+watch(visible, (v) => {
+  if (v && projectStore.currentProject?.id) {
+    plotStore.loadForProject(projectStore.currentProject.id);
+  }
+});
 
 const newType = ref<"foreshadow" | "plot-hole" | "cliffhanger" | "loose-end">("foreshadow");
 const newTitle = ref("");

@@ -66,7 +66,9 @@ let autoTimer: ReturnType<typeof setInterval> | null = null;
 
 async function loadBackups() {
   try {
-    backups.value = await invoke<string[]>("list_backups");
+    backups.value = await invoke<string[]>("list_backups", {
+      projectId: props.projectId,
+    });
   } catch (e) { console.error("加载备份列表失败:", e); }
 }
 
@@ -116,7 +118,10 @@ async function handleDeleteBackup(name: string) {
   } catch { return; }
 
   try {
-    await invoke("delete_backup", { backupName: name });
+    await invoke("delete_backup", {
+      backupName: name,
+      projectId: props.projectId,
+    });
     ElMessage.success("备份已删除");
     await loadBackups();
   } catch (e) {

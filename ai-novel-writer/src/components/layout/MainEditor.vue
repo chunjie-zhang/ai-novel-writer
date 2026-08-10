@@ -120,6 +120,12 @@
                 <el-dropdown-item command="outline-detail">
                   <el-icon><Icon icon="lucide:list-ordered" /></el-icon> 大纲→细纲生成
                 </el-dropdown-item>
+                <el-dropdown-item command="outline-to-text">
+                  <el-icon><Icon icon="lucide:pen-line" /></el-icon> 细纲→正文生成
+                </el-dropdown-item>
+                <el-dropdown-item command="version-history" divided>
+                  <el-icon><Icon icon="lucide:history" /></el-icon> 章节版本回溯
+                </el-dropdown-item>
                 <el-dropdown-item command="multi-agent">
                   <el-icon><Icon icon="lucide:bot" /></el-icon> 多智能体分析
                 </el-dropdown-item>
@@ -141,6 +147,7 @@
         <!-- Milkdown 富文本编辑器 -->
         <div v-else class="milkdown-wrapper">
           <MilkdownEditor
+            ref="milkdownEditorRef"
             :model-value="editorStore.content"
             @update:model-value="editorStore.setContent"
             @cursor-update="handleCursorUpdate"
@@ -190,6 +197,19 @@
       @apply="editorStore.setContent"
     />
 
+    <!-- 章节历史版本回溯对话框 -->
+    <VersionHistoryDialog
+      v-model:visible="showVersionHistoryDialog"
+      :project-id="projectStore.currentProject?.id || ''"
+      :chapter-file-name="editorStore.currentChapter?.file_name || ''"
+    />
+
+    <!-- 细纲→正文一键生成对话框 -->
+    <OutlineToTextDialog
+      v-model:visible="showOutlineToTextDialog"
+      @apply-at-cursor="handleApplyAtCursor"
+    />
+
     <!-- 日更目标设置对话框 -->
     <el-dialog v-model="showGoalDialog" title="日更目标" width="400px">
       <el-form label-width="100px">
@@ -235,6 +255,8 @@ import MilkdownEditor from "@/components/editor/MilkdownEditor.vue";
 import DiffDialog from "@/components/novel/DiffDialog.vue";
 import RhythmCheckDialog from "@/components/novel/RhythmCheckDialog.vue";
 import DedupDialog from "@/components/novel/DedupDialog.vue";
+import VersionHistoryDialog from "@/components/novel/VersionHistoryDialog.vue";
+import OutlineToTextDialog from "@/components/novel/OutlineToTextDialog.vue";
 
 const projectStore = useProjectStore();
 const editorStore = useEditorStore();
@@ -246,8 +268,11 @@ const showBatchManager = ref(false);
 const showDiffDialog = ref(false);
 const showRhythmDialog = ref(false);
 const showDedupDialog = ref(false);
+const showVersionHistoryDialog = ref(false);
+const showOutlineToTextDialog = ref(false);
 const newChapterTitle = ref("");
 const hasSelection = ref(false);
+const milkdownEditorRef = ref<InstanceType<typeof MilkdownEditor> | null>(null);
 const showGoalDialog = ref(false);
 const goalEnabled = ref(writingStore.stats.dailyGoal.enabled);
 const goalTarget = ref(writingStore.stats.dailyGoal.targetWords);
@@ -285,6 +310,8 @@ function handleToolCommand(cmd: string) {
     case "export-txt": handleExport("txt"); break;
     case "diff": showDiffDialog.value = true; break;
     case "outline-detail": handleOutlineDetail(); break;
+    case "outline-to-text": handleOutlineToText(); break;
+    case "version-history": handleVersionHistory(); break;
     case "multi-agent": handleMultiAgent(); break;
   }
 }
@@ -345,8 +372,27 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 document.addEventListener("keydown", handleKeydown);
+
+// 章节标题同步提示（保存时若首行 # 标题被修改，自动重命名并同步左侧树）
+function handleTitleSynced(e: Event) {
+  const title = (e as CustomEvent<string>).detail;
+  ElMessage.success(`章节标题已更新为「${title}」，左侧目录已同步`);
+}
+function handleTitleSyncError() {
+  ElMessage.error("章节标题同步失败，请检查后手动重命名");
+}
+window.addEventListener("chapter-title-synced", handleTitleSynced);
+window.addEventListener("chapter-title-sync-error", handleTitleSyncError);
+
 onBeforeUnmount(() => {
   document.removeEventListener("keydown", handleKeydown);
+  document.removeEventListener("selectionchange", handleSelectionChange);
+  window.removeEventListener("chapter-title-synced", handleTitleSynced);
+  window.removeEventListener("chapter-title-sync-error", handleTitleSyncError);
+  if (autoSaveTimer) {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = null;
+  }
 });
 
 function handleCursorUpdate(pos: number, scroll: number) {
@@ -354,9 +400,78 @@ function handleCursorUpdate(pos: number, scroll: number) {
   editorStore.updateScroll(scroll);
 }
 
+// 获取编辑器当前选中文本（通过 Milkdown 暴露的 ProseMirror 选区能力）
+// 点击菜单/工具栏按钮会导致编辑器失焦、实时选区读不到，因此回退到选区缓存
+let lastSelectionText = "";
+function getEditorSelection(): string {
+  const live = milkdownEditorRef.value?.getSelectionText?.()?.trim() || "";
+  return live || lastSelectionText;
+}
+// 用新文本替换编辑器当前选区（AI 结果局部应用，不覆盖整章）
+function replaceEditorSelection(newText: string) {
+  milkdownEditorRef.value?.replaceSelection?.(newText);
+}
+
+// 编辑器内选中文字时，显示 AI 快捷浮栏（润色/改写/扩写/缩写）
+function handleSelectionChange() {
+  const sel = window.getSelection();
+  const editorEl = document.querySelector(".milkdown-editor");
+  if (sel && sel.rangeCount > 0 && editorEl && editorEl.contains(sel.anchorNode)) {
+    const t = sel.toString().trim();
+    hasSelection.value = t.length > 0;
+    if (t) lastSelectionText = t;
+  } else {
+    hasSelection.value = false;
+  }
+}
+document.addEventListener("selectionchange", handleSelectionChange);
+
 async function handleSave() {
   if (projectStore.currentProject) {
     await editorStore.saveChapter(projectStore.currentProject.id);
+  }
+}
+
+// ===== 自动保存：停止输入 3 秒后自动写盘 =====
+const AUTO_SAVE_DELAY = 3000;
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+// 内容/修改状态变化时重置计时器（防抖：只要还在打字就不保存）
+watch(
+  [() => editorStore.isModified, () => editorStore.content],
+  () => {
+    if (autoSaveTimer) {
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = null;
+    }
+    if (
+      editorStore.isModified &&
+      editorStore.currentChapter &&
+      projectStore.currentProject
+    ) {
+      autoSaveTimer = setTimeout(() => {
+        autoSaveTimer = null;
+        autoSave();
+      }, AUTO_SAVE_DELAY);
+    }
+  }
+);
+
+async function autoSave() {
+  if (
+    !projectStore.currentProject ||
+    !editorStore.currentChapter ||
+    !editorStore.isModified ||
+    editorStore.isSaving
+  ) {
+    return;
+  }
+  try {
+    await editorStore.saveChapter(projectStore.currentProject.id);
+    // 静默保存：状态栏自动变为「已保存」，不打扰用户
+  } catch (e) {
+    console.error("自动保存失败:", e);
+    // 失败后不重试，等下次输入变化再触发
   }
 }
 
@@ -372,57 +487,56 @@ async function handleCreateChapter() {
     newChapterTitle.value.trim()
   );
   showNewChapter.value = false;
+  // 刷新项目结构，让左侧章节列表立即显示新章节
+  try {
+    await projectStore.openProject(projectStore.currentProject.id);
+  } catch (e) {
+    console.error("刷新项目结构失败:", e);
+  }
 }
 
 async function handleAI(action: string) {
-  const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-  if (!textarea) return;
-
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-  const selectedText = editorStore.content.substring(start, end);
-  if (!selectedText) return;
+  const selectedText = getEditorSelection();
+  if (!selectedText) {
+    ElMessage.warning("请先在正文中选中要处理的文字");
+    return;
+  }
 
   const messages = buildEditPrompt(selectedText, action);
   try {
     const response = await aiStore.sendMessage(
       messages[messages.length - 1].content
     );
-    const newContent =
-      editorStore.content.substring(0, start) + response + editorStore.content.substring(end);
-    editorStore.setContent(newContent);
+    // 用 AI 结果替换编辑器中的选中区域，不覆盖整章
+    replaceEditorSelection(response);
+    ElMessage.success("已应用 AI 修改");
   } catch (e) {
     console.error("AI 操作失败:", e);
   }
 }
 
-/** 文风采样：将当前编辑器中选中的文本作为文风样本 */
+/** 文风采样：优先采样编辑器选中文本，未选中则采样当前章节全文 */
 async function handleSampleStyle() {
-  const textarea = document.querySelector(".editor-textarea") as HTMLTextAreaElement;
-  if (!textarea) return;
+  const selectedText = getEditorSelection();
 
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-
-  if (start === end) {
-    // 没有选区，用全部内容
-    if (editorStore.content.length < 100) {
-      ElMessage.warning("请至少写 100 字再进行文风采样");
+  if (selectedText) {
+    // 有选区：采样选中的文字
+    if (selectedText.length < 50) {
+      ElMessage.warning("请至少选中 50 字，或取消选中后采样全文");
       return;
     }
-    writingStore.sampleStyle(editorStore.content);
-    ElMessage.success("已采样全文文风，后续 AI 将模仿此风格");
+    writingStore.sampleStyle(selectedText);
+    ElMessage.success(`已采样选中文本（${selectedText.length}字）的文风`);
     return;
   }
 
-  const selectedText = editorStore.content.substring(start, end);
-  if (selectedText.length < 50) {
-    ElMessage.warning("请至少选中 50 字");
+  // 没有选区：用全部内容
+  if (editorStore.content.length < 100) {
+    ElMessage.warning("请至少写 100 字再进行文风采样");
     return;
   }
-
-  writingStore.sampleStyle(selectedText);
-  ElMessage.success(`已采样选中文本（${selectedText.length}字）的文风`);
+  writingStore.sampleStyle(editorStore.content);
+  ElMessage.success("已采样全文文风，后续 AI 将模仿此风格");
 }
 
 /** 排版规整 */
@@ -522,6 +636,40 @@ async function handleOutlineDetail() {
   } catch (e) {
     ElMessage.error("生成失败: " + e);
   }
+}
+
+/** 细纲→正文一键生成（打开对话框） */
+function handleOutlineToText() {
+  if (!editorStore.currentChapter) {
+    ElMessage.warning("请先选择或创建章节，再生成正文");
+    return;
+  }
+  showOutlineToTextDialog.value = true;
+}
+
+/** 章节历史版本回溯（打开对话框） */
+function handleVersionHistory() {
+  if (!editorStore.currentChapter || !projectStore.currentProject) {
+    ElMessage.warning("请先选择章节");
+    return;
+  }
+  showVersionHistoryDialog.value = true;
+}
+
+/** 细纲→正文：插入到光标处（无选区则追加到末尾） */
+function handleApplyAtCursor(text: string) {
+  const editor = milkdownEditorRef.value;
+  if (editor && editorStore.currentChapter) {
+    const sel = editor.getSelectionText();
+    if (sel) {
+      editor.replaceSelection(text);
+    } else {
+      editorStore.insertContent("\n\n" + text);
+    }
+  } else {
+    editorStore.insertContent("\n\n" + text);
+  }
+  ElMessage.success("已插入，请记得保存");
 }
 
 /** 多智能体分析 */

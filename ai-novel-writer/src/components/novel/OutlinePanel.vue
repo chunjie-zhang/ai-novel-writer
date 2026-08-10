@@ -105,7 +105,7 @@ const editorStore = useEditorStore();
 const editingId = ref("");
 
 function handleInitOutline() {
-  outlineStore.initOutline("新作品");
+  outlineStore.initOutline(projectStore.currentProject?.name || "新作品");
 }
 
 /** 点击大纲章节 → 跳转到编辑器对应章节 */
@@ -163,7 +163,7 @@ async function handleLinkChapter(ch: any) {
     const idx = parseInt(result.value) - 1;
     if (idx >= 0 && idx < chapters.length) {
       ch.link = chapters[idx].file_name;
-      outlineStore.saveOutline();
+      saveOutline();
       ElMessage.success(`已关联到「${chapters[idx].title}」`);
     }
   } catch {}
@@ -188,15 +188,14 @@ function syncFromEditor() {
 defineExpose({ syncFromEditor });
 
 function saveOutline() {
-  const json = outlineStore.toJSON();
-  localStorage.setItem("novel-outline", json);
+  if (!projectStore.currentProject) return;
+  outlineStore.saveOutline(projectStore.currentProject.id);
   ElMessage.success("大纲已保存");
 }
 
-// 加载已保存的大纲
-const saved = localStorage.getItem("novel-outline");
-if (saved) {
-  outlineStore.fromJSON(saved);
+// 加载当前项目已保存的大纲（按项目隔离，避免切换小说串数据）
+if (projectStore.currentProject?.id) {
+  outlineStore.loadOutline(projectStore.currentProject.id);
 }
 </script>
 

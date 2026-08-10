@@ -1,7 +1,11 @@
 <template>
   <div class="app-container" :class="{ 'focus-mode': isFocusMode }">
-    <!-- 顶部标题栏 -->
-    <header class="app-header">
+    <!-- 顶部标题栏（macOS Overlay 下充当标题栏拖拽区） -->
+    <header
+      class="app-header"
+      :class="{ 'is-mac': isMac }"
+      data-tauri-drag-region
+    >
       <div class="header-left">
         <span class="app-logo">✍️ AI 小说创作工具</span>
       </div>
@@ -12,6 +16,9 @@
         <span v-else class="no-project">未选择项目</span>
       </div>
       <div class="header-right">
+        <el-button text circle @click="showGuide = true" title="新手引导 / 帮助">
+          <el-icon><Icon icon="lucide:circle-question-mark" /></el-icon>
+        </el-button>
         <el-button text circle @click="showNewProject = true" title="新建项目">
           <el-icon><Icon icon="lucide:folder-plus" /></el-icon>
         </el-button>
@@ -86,11 +93,17 @@
         <el-tab-pane label="模型配置">
           <ModelConfig @saved="showSettings = false" />
         </el-tab-pane>
+        <el-tab-pane label="外观主题">
+          <AppearanceSettings />
+        </el-tab-pane>
         <el-tab-pane label="存储位置">
           <StorageSettings />
         </el-tab-pane>
       </el-tabs>
     </el-dialog>
+
+    <!-- 新手引导（首次启动自动弹出，也可通过顶部 ? 按钮打开） -->
+    <WelcomeGuide v-model:visible="showGuide" @finish="handleGuideFinish" />
   </div>
 </template>
 
@@ -104,12 +117,23 @@ import MainEditor from "@/components/layout/MainEditor.vue";
 import AIChatPanel from "@/components/layout/AIChatPanel.vue";
 import ModelConfig from "@/components/ai/ModelConfig.vue";
 import StorageSettings from "@/components/ai/StorageSettings.vue";
+import AppearanceSettings from "@/components/ai/AppearanceSettings.vue";
+import WelcomeGuide from "@/components/onboarding/WelcomeGuide.vue";
+import { useThemeStore } from "@/stores/theme";
 
 const projectStore = useProjectStore();
 const aiStore = useAIStore();
+const themeStore = useThemeStore();
+
+// macOS：系统标题栏已设为 Overlay 透明，需为左上角红绿灯按钮预留空间
+const isMac = ref(
+  typeof navigator !== "undefined" &&
+  /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)
+);
 
 const showNewProject = ref(false);
 const showSettings = ref(false);
+const showGuide = ref(false);
 const isFocusMode = ref(false);
 const defaultStoragePath = ref("");
 
@@ -200,16 +224,28 @@ async function loadStoragePath() {
   }
 }
 
-onMounted(() => {
-  projectStore.loadProjects();
+onMounted(async () => {
+  await projectStore.loadProjects();
   loadStoragePath();
   // 从磁盘恢复 AI 模型配置（比 localStorage 可靠，不怕清缓存丢配置）
   aiStore.initFromDisk();
+  // 初始化主题（跟随系统 / 白天 / 黑夜）
+  themeStore.init();
   // 恢复面板宽度 + 注册拖拽监听
   restorePanelWidths();
   document.addEventListener("mousemove", onMouseMove);
   document.addEventListener("mouseup", onMouseUp);
+
+  // 首次启动：自动弹出新手引导（仅一次，之后可通过顶部 ? 按钮再次打开）
+  if (!localStorage.getItem("novel-onboarding-done")) {
+    showGuide.value = true;
+  }
 });
+
+/** 引导完成 / 跳过：记录已引导，避免每次启动都弹 */
+function handleGuideFinish() {
+  localStorage.setItem("novel-onboarding-done", "1");
+}
 
 onBeforeUnmount(() => {
   document.removeEventListener("mousemove", onMouseMove);
@@ -234,9 +270,27 @@ onBeforeUnmount(() => {
   background: var(--panel-bg);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
+  /* Windows/Linux 用：WebKit 专属拖拽（macOS WKWebView 不支持，走 data-tauri-drag-region） */
   -webkit-app-region: drag;
   flex-shrink: 0;
   z-index: 20;
+}
+
+/* macOS：为左上角红绿灯按钮预留空间（标题栏透明叠加） */
+.app-header.is-mac {
+  padding-left: 84px;
+}
+
+/* 头部按钮需可点击（不被窗口拖拽拦截） */
+.app-header .el-button,
+.app-header .header-right {
+  -webkit-app-region: no-drag;
+}
+
+/* data-tauri-drag-region 不继承：给非交互内容区显式标记可拖（含 header-left/center） */
+.app-header .header-left,
+.app-header .header-center {
+  -webkit-app-region: drag;
 }
 
 .header-left {

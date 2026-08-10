@@ -253,19 +253,22 @@ pub fn backup_project(app_handle: tauri::AppHandle, project_id: String) -> Resul
     Ok(backup_name)
 }
 
-/// 列出所有备份
+/// 列出某项目的所有备份（按 project_id 过滤，避免跨小说共享备份）
 #[tauri::command]
-pub fn list_backups(app_handle: tauri::AppHandle) -> Result<Vec<String>, String> {
+pub fn list_backups(app_handle: tauri::AppHandle, project_id: String) -> Result<Vec<String>, String> {
     let backup_root = get_projects_dir(&app_handle).join("__backups__");
     if !backup_root.exists() {
         return Ok(vec![]);
     }
 
+    // 备份命名格式：{safe_name}_{timestamp}_{project_id}，按后缀过滤
+    let suffix = format!("_{}", project_id);
     let mut backups: Vec<String> = fs::read_dir(&backup_root)
         .map_err(|e| format!("读取备份目录失败: {}", e))?
         .filter_map(|e| e.ok())
         .filter(|e| e.path().is_dir())
         .map(|e| e.file_name().to_string_lossy().to_string())
+        .filter(|name| name.ends_with(&suffix))
         .collect();
 
     backups.sort_by(|a, b| b.cmp(a)); // 最新在前
@@ -275,6 +278,11 @@ pub fn list_backups(app_handle: tauri::AppHandle) -> Result<Vec<String>, String>
 /// 从备份恢复
 #[tauri::command]
 pub fn restore_backup(app_handle: tauri::AppHandle, backup_name: String, project_id: String) -> Result<(), String> {
+    // 校验备份属于当前项目，防止误恢复其他小说
+    if !backup_name.ends_with(&format!("_{}", project_id)) {
+        return Err("该备份不属于当前项目，无法恢复".to_string());
+    }
+
     let backup_root = get_projects_dir(&app_handle).join("__backups__");
     let backup_dir = backup_root.join(&backup_name);
     
@@ -296,9 +304,12 @@ pub fn restore_backup(app_handle: tauri::AppHandle, backup_name: String, project
     Ok(())
 }
 
-/// 删除备份
+/// 删除备份（校验归属）
 #[tauri::command]
-pub fn delete_backup(app_handle: tauri::AppHandle, backup_name: String) -> Result<(), String> {
+pub fn delete_backup(app_handle: tauri::AppHandle, backup_name: String, project_id: String) -> Result<(), String> {
+    if !backup_name.ends_with(&format!("_{}", project_id)) {
+        return Err("该备份不属于当前项目，无法删除".to_string());
+    }
     let backup_dir = get_projects_dir(&app_handle).join("__backups__").join(&backup_name);
     if !backup_dir.exists() {
         return Err("备份不存在".to_string());

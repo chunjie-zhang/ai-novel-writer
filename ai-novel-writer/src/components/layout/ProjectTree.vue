@@ -83,6 +83,51 @@
             </div>
           </template>
 
+          <!-- 小说功能（收起到可折叠分组，放在章节上方，避免上千章时被挤到最底部找不到） -->
+          <el-sub-menu :index="`${proj.id}:__features__`">
+            <template #title>
+              <el-icon><Icon icon="lucide:layers" /></el-icon>
+              <span>小说功能</span>
+            </template>
+
+            <!-- 角色管理 -->
+            <el-menu-item :index="`${proj.id}:__characters__`">
+              <el-icon><Icon icon="lucide:users" /></el-icon>
+              <span>角色管理</span>
+            </el-menu-item>
+
+            <!-- 世界观 -->
+            <el-menu-item :index="`${proj.id}:__world__`">
+              <el-icon><Icon icon="lucide:globe" /></el-icon>
+              <span>世界观设定</span>
+            </el-menu-item>
+
+            <el-menu-item :index="`${proj.id}:__report__`">
+              <el-icon><Icon icon="lucide:bar-chart-3" /></el-icon>
+              <span>写作报表</span>
+            </el-menu-item>
+            <el-menu-item :index="`${proj.id}:__plot__`">
+              <el-icon><Icon icon="lucide:alert-triangle" /></el-icon>
+              <span>伏笔管理</span>
+            </el-menu-item>
+            <el-menu-item :index="`${proj.id}:__search__`">
+              <el-icon><Icon icon="lucide:search" /></el-icon>
+              <span>全文搜索</span>
+            </el-menu-item>
+            <el-menu-item :index="`${proj.id}:__qa__`">
+              <el-icon><Icon icon="lucide:message-circle-question-mark" /></el-icon>
+              <span>全书问答</span>
+            </el-menu-item>
+            <el-menu-item :index="`${proj.id}:__novel_info__`">
+              <el-icon><Icon icon="lucide:book-open" /></el-icon>
+              <span>小说信息</span>
+            </el-menu-item>
+            <el-menu-item :index="`${proj.id}:__templates__`">
+              <el-icon><Icon icon="lucide:layout-template" /></el-icon>
+              <span>题材模板</span>
+            </el-menu-item>
+          </el-sub-menu>
+
           <!-- 章节列表（按分组展示） -->
           <template v-for="g in getChapterGroups(proj.id)" :key="g || '__root__'">
             <el-menu-item-group v-if="g" :title="g">
@@ -108,44 +153,6 @@
               <span class="chapter-words">{{ chapter.word_count }}字</span>
             </el-menu-item>
           </template>
-
-          <!-- 角色管理 -->
-          <el-menu-item :index="`${proj.id}:__characters__`">
-            <el-icon><Icon icon="lucide:users" /></el-icon>
-            <span>角色管理</span>
-          </el-menu-item>
-
-          <!-- 世界观 -->
-          <el-menu-item :index="`${proj.id}:__world__`">
-            <el-icon><Icon icon="lucide:globe" /></el-icon>
-            <span>世界观设定</span>
-          </el-menu-item>
-
-          <!-- 小说专属功能（针对该小说） -->
-          <el-menu-item :index="`${proj.id}:__report__`">
-            <el-icon><Icon icon="lucide:bar-chart-3" /></el-icon>
-            <span>写作报表</span>
-          </el-menu-item>
-          <el-menu-item :index="`${proj.id}:__plot__`">
-            <el-icon><Icon icon="lucide:alert-triangle" /></el-icon>
-            <span>伏笔管理</span>
-          </el-menu-item>
-          <el-menu-item :index="`${proj.id}:__search__`">
-            <el-icon><Icon icon="lucide:search" /></el-icon>
-            <span>全文搜索</span>
-          </el-menu-item>
-          <el-menu-item :index="`${proj.id}:__qa__`">
-            <el-icon><Icon icon="lucide:message-square-question" /></el-icon>
-            <span>全书问答</span>
-          </el-menu-item>
-          <el-menu-item :index="`${proj.id}:__novel_info__`">
-            <el-icon><Icon icon="lucide:book-open" /></el-icon>
-            <span>小说信息</span>
-          </el-menu-item>
-          <el-menu-item :index="`${proj.id}:__templates__`">
-            <el-icon><Icon icon="lucide:layout-template" /></el-icon>
-            <span>题材模板</span>
-          </el-menu-item>
         </el-sub-menu>
       </template>
     </el-menu>
@@ -196,6 +203,7 @@ import { ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useProjectStore } from "@/stores/project";
 import { useEditorStore } from "@/stores/editor";
+import { useVersionsStore } from "@/stores/versions";
 import { invoke } from "@tauri-apps/api/core";
 import OutlinePanel from "@/components/novel/OutlinePanel.vue";
 import BackupManager from "@/components/novel/BackupManager.vue";
@@ -323,6 +331,7 @@ async function handleDeleteProject(proj: any) {
 
   try {
     await projectStore.deleteProject(proj.id);
+    useVersionsStore().clearProject(proj.id);
     ElMessage.success(`已删除小说「${proj.name}」`);
   } catch (e) {
     ElMessage.error("删除失败: " + e);

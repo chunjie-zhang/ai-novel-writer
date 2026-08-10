@@ -3,9 +3,119 @@
 @tailwind utilities;
 
 /* ============================================================
-   深色主题（Notion / Typora 风格）
+   浅色主题（白天，默认）
+   深色主题通过 <html class="theme-dark"> 覆盖本块变量
    ============================================================ */
 :root {
+  color-scheme: light;
+
+  /* ---- 应用语义变量 ---- */
+  --app-bg: #f4f5f7;            /* 最外层页面背景 */
+  --panel-bg: #ffffff;          /* 面板 / 卡片背景 */
+  --panel-bg-2: #f0f1f4;        /* 次级面板背景 */
+  --panel-hover: #e9ebef;       /* hover 背景 */
+  --border: #dfe2e8;            /* 边框 */
+  --border-light: #d0d5dd;      /* 浅边框 / 分隔线 */
+  --text-1: #1f2329;            /* 主文字 */
+  --text-2: #5a6472;            /* 次级文字 */
+  --text-3: #8f98a5;            /* 弱化文字 */
+  --accent: #3f7df0;            /* 主色（蓝） */
+  --accent-soft: rgba(63, 125, 240, 0.12);
+  --green: #2fae66;
+  --green-soft: rgba(47, 174, 102, 0.12);
+  --orange: #d9890f;
+  --orange-soft: rgba(217, 137, 15, 0.12);
+  --red: #d9505a;
+  --red-soft: rgba(217, 80, 90, 0.12);
+
+  --header-height: 48px;
+  --sidebar-width: 280px;
+  --right-panel-width: 360px;
+
+  /* ---- Element Plus 变量覆盖（浅色） ---- */
+  --el-color-primary: #3f7df0;
+  --el-color-primary-light-3: #6a97f3;
+  --el-color-primary-light-5: #94b4f7;
+  --el-color-primary-light-7: #c3d6fb;
+  --el-color-primary-light-8: #d9e4fd;
+  --el-color-primary-light-9: #f0f5ff;
+  --el-color-primary-dark-2: #3264c0;
+
+  --el-color-success: #2fae66;
+  --el-color-success-light-3: #7fc69b;
+  --el-color-success-light-5: #a5d9ba;
+  --el-color-success-light-7: #cdebd8;
+  --el-color-success-light-8: #e0f3e7;
+  --el-color-success-light-9: #f2faf5;
+  --el-color-success-dark-2: #268b52;
+
+  --el-color-warning: #d9890f;
+  --el-color-warning-light-3: #e4ad54;
+  --el-color-warning-light-5: #edc98a;
+  --el-color-warning-light-7: #f6e3c1;
+  --el-color-warning-light-8: #f9eed5;
+  --el-color-warning-light-9: #fdf8ee;
+  --el-color-warning-dark-2: #ae6e0c;
+
+  --el-color-danger: #d9505a;
+  --el-color-danger-light-3: #e58a90;
+  --el-color-danger-light-5: #eeafb4;
+  --el-color-danger-light-7: #f6d3d6;
+  --el-color-danger-light-8: #fae3e5;
+  --el-color-danger-light-9: #fdf3f4;
+  --el-color-danger-dark-2: #ad4048;
+
+  --el-color-error: #d9505a;
+  --el-color-error-light-3: #e58a90;
+  --el-color-error-light-5: #eeafb4;
+  --el-color-error-light-7: #f6d3d6;
+  --el-color-error-light-8: #fae3e5;
+  --el-color-error-light-9: #fdf3f4;
+  --el-color-error-dark-2: #ad4048;
+
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #f4f5f7;
+  --el-bg-color-overlay: #ffffff;
+  --el-bg-color-overlay-2: #fbfbfc;
+
+  --el-fill-color: #eef0f3;
+  --el-fill-color-light: #f4f5f7;
+  --el-fill-color-lighter: #f7f8fa;
+  --el-fill-color-extra-light: #fafafa;
+  --el-fill-color-dark: #e0e3e8;
+  --el-fill-color-darker: #d6d9df;
+  --el-fill-color-blank: #ffffff;
+
+  --el-text-color-primary: #1f2329;
+  --el-text-color-regular: #3f4650;
+  --el-text-color-secondary: #5a6472;
+  --el-text-color-placeholder: #9aa3af;
+  --el-text-color-disabled: #c0c4cc;
+
+  --el-border-color: #d0d5dd;
+  --el-border-color-light: #d8dce3;
+  --el-border-color-lighter: #dfe2e8;
+  --el-border-color-extra-light: #e6e9ee;
+  --el-border-color-dark: #c4c9d2;
+  --el-border-color-darker: #b9bfc9;
+
+  --el-mask-color: rgba(0, 0, 0, 0.45);
+  --el-mask-color-extra-light: rgba(0, 0, 0, 0.25);
+
+  --el-box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  --el-box-shadow-light: 0 4px 14px rgba(0, 0, 0, 0.08);
+  --el-box-shadow-lighter: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --el-box-shadow-dark: 0 10px 36px rgba(0, 0, 0, 0.16);
+
+  --el-disabled-bg-color: #f4f5f7;
+  --el-disabled-text-color: #c0c4cc;
+  --el-disabled-border-color: #dfe2e8;
+}
+
+/* ============================================================
+   深色主题（黑夜，html.theme-dark）
+   ============================================================ */
+:root.theme-dark {
   color-scheme: dark;
 
   /* ---- 应用语义变量 ---- */

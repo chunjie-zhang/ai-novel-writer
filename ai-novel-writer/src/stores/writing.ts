@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed, watch } from "vue";
-import { useEditorStore } from "./editor";
+import { ref, computed } from "vue";
 
 /** 6 大写作场景预设 */
 export type WritingScene = "quick-write" | "polish" | "plot-idea" | "character-gen" | "logic-check" | "outline";
@@ -95,7 +94,6 @@ function saveStats(s: PersistedStats) {
 export const useWritingStore = defineStore("writing", () => {
   // ===== 写作场景 =====
   const activeScene = ref<WritingScene | null>(null);
-  const editorStore = useEditorStore();
 
   const currentScene = computed(() =>
     activeScene.value ? SCENE_PRESETS[activeScene.value] : null
@@ -119,26 +117,25 @@ export const useWritingStore = defineStore("writing", () => {
     }
   }
 
-  // 监听字数变化，自动累计
-  watch(
-    () => editorStore.wordCount,
-    (newVal, oldVal) => {
+  // 监听用户实际输入的字数，自动累计（仅编辑器用户输入触发，打开/切换章节不计入）
+  function initInputListener() {
+    window.addEventListener("editor-user-input", ((e: Event) => {
+      const added = (e as CustomEvent).detail as number;
+      if (!added || added <= 0) return;
       ensureToday();
-      const diff = newVal - (oldVal || 0);
-      if (diff > 0) {
-        stats.value.writtenToday += diff;
-        stats.value.totalWrittenAllTime += diff;
-        saveStats(stats.value);
-        // 同时记录到每日统计历史
-        try {
-          const today = new Date().toISOString().slice(0, 10);
-          const history = JSON.parse(localStorage.getItem("novel-daily-stats") || "{}");
-          history[today] = (history[today] || 0) + diff;
-          localStorage.setItem("novel-daily-stats", JSON.stringify(history));
-        } catch (e) { console.error("加载写作统计失败:", e); }
-      }
-    }
-  );
+      stats.value.writtenToday += added;
+      stats.value.totalWrittenAllTime += added;
+      saveStats(stats.value);
+      // 同时记录到每日统计历史
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const history = JSON.parse(localStorage.getItem("novel-daily-stats") || "{}");
+        history[today] = (history[today] || 0) + added;
+        localStorage.setItem("novel-daily-stats", JSON.stringify(history));
+      } catch (e) { console.error("记录写作统计失败:", e); }
+    }) as EventListener);
+  }
+  initInputListener();
 
   // 日更目标进度
   const dailyProgress = computed(() => {
@@ -185,11 +182,11 @@ export const useWritingStore = defineStore("writing", () => {
     return `【人设校验】\n角色设定：${characterProfiles.value}\n\n请检查以下内容中是否有角色行为、台词、性格与设定不一致的地方（人设崩塌/OOC）。如果有，列出具体问题。\n\n${content}`;
   }
 
-  // ===== 敏感词库 =====
+  // ===== 敏感词库（仅保留多字词，避免单字“习”误报“学习/习惯”等正常词）=====
   const sensitiveWords = ref<string[]>([
     "他妈", "我操", "傻逼", "草泥马", "fuck", "shit",
     // 出版合规类
-    "习", "共产党", "天安门", "法轮功", "六四",
+    "共产党", "天安门", "法轮功", "六四",
     // 网文平台敏感
     "吸毒", "卖淫", "赌博", "暴力血腥",
   ]);
