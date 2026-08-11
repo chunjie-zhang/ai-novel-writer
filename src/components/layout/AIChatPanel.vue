@@ -189,9 +189,9 @@
     <NovelImportDialog v-model:visible="showImport" @confirm="handleImportConfirm" />
 
     <!-- 人设校验结果对话框 -->
-    <el-dialog v-model="showOOCDialog" width="480px" :close-on-click-modal="false">
+    <el-dialog v-model="showOOCDialog" width="560px" :close-on-click-modal="false" class="ooc-dialog">
       <template #header>
-        <span class="dlg-title"><el-icon><Icon icon="lucide:user" /></el-icon> 人设校验提醒</span>
+        <span class="dlg-title"><el-icon><Icon icon="lucide:shield-alert" /></el-icon> 人设校验提醒</span>
       </template>
       <div class="ooc-content">
         <el-alert
@@ -202,6 +202,15 @@
           :closable="false"
         />
         <div class="ooc-detail">
+          <div class="ooc-detail-head">
+            <span class="ooc-detail-badge">
+              <el-icon><Icon icon="lucide:shield-alert" /></el-icon>
+            </span>
+            <div class="ooc-detail-title">
+              <span class="ooc-detail-title-text">校验详情</span>
+              <span class="ooc-detail-sub">角色行为与设定一致性检查报告</span>
+            </div>
+          </div>
           <pre>{{ showOOCResult }}</pre>
         </div>
       </div>
@@ -886,5 +895,137 @@ async function scrollToBottom() {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+}
+</style>
+
+<!-- 人设校验（OOC）弹窗：独立非 scoped 样式，穿透 teleport 渲染的 el-dialog -->
+<style>
+.ooc-dialog .el-dialog {
+  border-radius: 14px;
+  overflow: hidden;
+}
+.ooc-dialog .el-dialog__header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--orange-soft) 0%, transparent 100%);
+  margin-right: 0;
+}
+.ooc-dialog .el-dialog__title {
+  font-size: 16px;
+}
+.ooc-dialog .dlg-title .el-icon {
+  color: var(--orange);
+}
+
+.ooc-dialog .ooc-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+/* 摘要 Alert 圆角 + 柔和阴影 */
+.ooc-dialog .el-alert {
+  border-radius: 10px;
+  border: 1px solid rgba(217, 137, 15, 0.25);
+  padding: 12px 14px;
+}
+.ooc-dialog .el-alert--warning {
+  background: var(--orange-soft);
+}
+.ooc-dialog .el-alert__title {
+  font-weight: 600;
+  color: var(--orange);
+  font-size: 14px;
+}
+.ooc-dialog .el-alert__description {
+  margin-top: 6px;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ooc-dialog .el-alert__icon {
+  color: var(--orange);
+  font-size: 20px;
+}
+
+/* 详情卡片 */
+.ooc-dialog .ooc-detail {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-bg-2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+/* 卡片头部：徽章 + 标题 */
+.ooc-dialog .ooc-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--panel-bg) 0%, var(--panel-bg-2) 100%);
+  flex-shrink: 0;
+}
+
+.ooc-dialog .ooc-detail-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--orange-soft);
+  color: var(--orange);
+  flex-shrink: 0;
+}
+.ooc-dialog .ooc-detail-badge .el-icon {
+  font-size: 17px;
+}
+
+.ooc-dialog .ooc-detail-title {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.ooc-dialog .ooc-detail-title-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.ooc-dialog .ooc-detail-sub {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* 详情正文 */
+.ooc-dialog .ooc-detail pre {
+  margin: 0;
+  padding: 14px 16px;
+  font-family: var(--font-mono, ui-monospace, "SF Mono", Menlo, Consolas, monospace);
+  font-size: 12.5px;
+  line-height: 1.75;
+  color: var(--text-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-height: 320px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.ooc-dialog .ooc-detail pre::-webkit-scrollbar {
+  width: 8px;
+}
+.ooc-dialog .ooc-detail pre::-webkit-scrollbar-thumb {
+  background: var(--border-strong, rgba(128, 128, 128, 0.4));
+  border-radius: 4px;
+}
+.ooc-dialog .ooc-detail pre::-webkit-scrollbar-track {
+  background: transparent;
 }
 </style>

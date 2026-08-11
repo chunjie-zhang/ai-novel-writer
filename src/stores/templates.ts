@@ -5,6 +5,8 @@ export interface NovelTemplate {
   id: string;
   name: string;
   emoji: string;
+  /** lucide 图标名（组件库 Icon），卡片展示用 */
+  icon: string;
   description: string;
   /** 推荐 temperature */
   temperature: number;
@@ -27,6 +29,7 @@ const ALL_TEMPLATES: NovelTemplate[] = [
     id: "xuanhuan",
     name: "玄幻仙侠",
     emoji: "🐉",
+    icon: "lucide:gem",
     description: "修炼升级、宗门争霸、天地法则",
     temperature: 0.85,
     stylePrompt: "文风偏向古风雅韵，修炼体系需有明确等级（炼气→筑基→金丹→元婴等），打斗场面要气势恢宏。注重境界突破的感悟描写。",
@@ -39,6 +42,7 @@ const ALL_TEMPLATES: NovelTemplate[] = [
     id: "dushi",
     name: "都市生活",
     emoji: "🏙️",
+    icon: "lucide:building-2",
     description: "现代都市、职场商战、情感生活",
     temperature: 0.8,
     stylePrompt: "文风偏写实，对话要自然贴近生活，场景描写要真实具体。人物心理活动细腻，情感表达克制而真实。",
@@ -51,6 +55,7 @@ const ALL_TEMPLATES: NovelTemplate[] = [
     id: "yanqing",
     name: "言情恋爱",
     emoji: "💕",
+    icon: "lucide:heart",
     description: "甜蜜恋爱、虐恋情深、欢喜冤家",
     temperature: 0.9,
     stylePrompt: "情感描写细腻丰富，注重人物互动中的微表情和氛围感。对话要有张力，眼神/动作的描写比直白告白更能打动读者。",
@@ -63,6 +68,7 @@ const ALL_TEMPLATES: NovelTemplate[] = [
     id: "kehuan",
     name: "科幻未来",
     emoji: "🚀",
+    icon: "lucide:rocket",
     description: "星际文明、人工智能、赛博朋克",
     temperature: 0.85,
     stylePrompt: "科技描写要有一定硬科幻基础（但不需过度解释原理）。世界观可以有独特科技设定，需要保持自洽。文风可冷峻理性或人文关怀两种方向。",
@@ -75,6 +81,7 @@ const ALL_TEMPLATES: NovelTemplate[] = [
     id: "xuanyi",
     name: "悬疑推理",
     emoji: "🔍",
+    icon: "lucide:search",
     description: "案件推理、心理悬疑、层层反转",
     temperature: 0.7,
     stylePrompt: "逻辑严密，线索在前剧情在后（不能凭空出现破案关键）。氛围渲染要到位，读者应该有'我早该想到'的感觉。对话包含误导与伏笔。",
@@ -87,6 +94,7 @@ const ALL_TEMPLATES: NovelTemplate[] = [
     id: "qihuan",
     name: "奇幻冒险",
     emoji: "⚔️",
+    icon: "lucide:sword",
     description: "西方奇幻、魔法世界、勇者征程",
     temperature: 0.85,
     stylePrompt: "史诗感文风，场景描写宏大。魔法/种族/世界设定需要系统化和自洽。冒险过程中逐渐揭示世界真相。",
@@ -99,6 +107,7 @@ const ALL_TEMPLATES: NovelTemplate[] = [
     id: "lishi",
     name: "历史穿越",
     emoji: "🏯",
+    icon: "lucide:landmark",
     description: "穿越历史、改变命运、王朝争霸",
     temperature: 0.8,
     stylePrompt: "需要一定的历史考据，但不过度拘泥史实。主角利用现代知识改变历史走向要有逻辑。文风可偏文言简练或通俗白话。",
@@ -111,6 +120,7 @@ const ALL_TEMPLATES: NovelTemplate[] = [
     id: "kongbu",
     name: "恐怖灵异",
     emoji: "👻",
+    icon: "lucide:ghost",
     description: "灵异惊悚、克苏鲁、心理恐惧",
     temperature: 0.9,
     stylePrompt: "氛围第一，Jump Scare第二。通过环境描写和细节暗示制造不安感。未知比直白展示更可怕。第一人称视角效果更佳。",

@@ -581,6 +581,8 @@ async function handleWorldSave(world: any) {
   align-items: center;
   gap: 6px;
   margin-left: 4px;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .tree-header-actions :deep(.el-button) {
@@ -621,6 +623,10 @@ async function handleWorldSave(world: any) {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-1);
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 下拉菜单美化 */
@@ -704,6 +710,7 @@ async function handleWorldSave(world: any) {
   position: relative;
   /* 为选中态左侧指示条留出间距，避免竖线与文件夹图标贴在一起 */
   padding-left: 10px;
+  min-width: 0;
 }
 
 /* 选中的小说：标题行整体高亮背景 + 左侧指示条 + 加粗蓝字 */
@@ -733,7 +740,8 @@ async function handleWorldSave(world: any) {
 }
 
 .node-name {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -743,6 +751,18 @@ async function handleWorldSave(world: any) {
 .node-date {
   font-size: 11px;
   color: var(--text-3);
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity 0.15s, width 0.15s, margin 0.15s;
+}
+
+/* hover 节点时：日期淡出，给名字和操作按钮让位 */
+.el-sub-menu__title:hover .node-date,
+.project-node:hover .node-date {
+  opacity: 0;
+  width: 0;
+  margin: 0;
 }
 
 /* 「章节」收纳文件夹 */
@@ -826,16 +846,25 @@ async function handleWorldSave(world: any) {
   color: var(--red);
 }
 
-/* 项目节点上的「迁移位置」按钮：始终显示，hover 变蓝 */
+/* 项目节点上的「迁移位置」按钮：hover 节点时展开显示，hover 变蓝 */
 .node-move-btn {
-  width: 22px;
+  width: 0;
   height: 22px;
   padding: 0;
   color: var(--text-3);
-  margin-left: 2px;
+  margin: 0;
+  opacity: 0;
+  overflow: hidden;
   flex-shrink: 0;
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.15s, background 0.15s, opacity 0.15s, width 0.15s, margin 0.15s;
   border-radius: 4px;
+}
+
+.el-sub-menu__title:hover .node-move-btn,
+.project-node:hover .node-move-btn {
+  width: 22px;
+  margin-left: 2px;
+  opacity: 1;
 }
 
 .node-move-btn:hover {
@@ -843,16 +872,25 @@ async function handleWorldSave(world: any) {
   background: var(--accent-soft) !important;
 }
 
-/* 项目节点上的「删除」按钮 */
+/* 项目节点上的「删除」按钮：hover 节点时展开显示 */
 .node-del-btn {
-  width: 22px;
+  width: 0;
   height: 22px;
   padding: 0;
   color: var(--text-3);
-  margin-left: 2px;
+  margin: 0;
+  opacity: 0;
+  overflow: hidden;
   flex-shrink: 0;
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.15s, background 0.15s, opacity 0.15s, width 0.15s, margin 0.15s;
   border-radius: 4px;
+}
+
+.el-sub-menu__title:hover .node-del-btn,
+.project-node:hover .node-del-btn {
+  width: 22px;
+  margin-left: 2px;
+  opacity: 1;
 }
 
 .node-del-btn:hover {

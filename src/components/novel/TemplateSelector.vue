@@ -12,7 +12,9 @@
           :class="{ active: templateStore.activeTemplateId === t.id }"
           @click="templateStore.setTemplate(t.id)"
         >
-          <span class="template-emoji">{{ t.emoji }}</span>
+          <span class="template-icon">
+            <el-icon :size="28"><Icon :icon="t.icon" /></el-icon>
+          </span>
           <span class="template-name">{{ t.name }}</span>
           <span class="template-desc">{{ t.description }}</span>
           <div class="template-tags">
@@ -23,7 +25,11 @@
 
       <div v-if="templateStore.activeTemplate" class="template-detail">
         <el-divider />
-        <h4>已选：{{ templateStore.activeTemplate.emoji }} {{ templateStore.activeTemplate.name }}</h4>
+        <h4>
+          已选：
+          <el-icon class="selected-icon"><Icon :icon="templateStore.activeTemplate.icon" /></el-icon>
+          {{ templateStore.activeTemplate.name }}
+        </h4>
         <div class="detail-section">
           <div class="detail-item">
             <span class="detail-label">文风指引</span>
@@ -73,13 +79,14 @@ const templateStore = useTemplateStore();
 .template-card:hover { border-color: var(--accent); background: var(--panel-hover); }
 .template-card.active { border-color: var(--accent); background: var(--accent-soft); }
 
-.template-emoji { font-size: 28px; }
+.template-icon { color: var(--accent); line-height: 1; }
 .template-name { font-size: 15px; font-weight: 600; color: var(--text-1); }
 .template-desc { font-size: 12px; color: var(--text-2); }
 .template-tags { display: flex; gap: 4px; flex-wrap: wrap; }
 
 .template-detail { text-align: left; }
-.template-detail h4 { margin-bottom: 12px; color: var(--text-1); }
+.template-detail h4 { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; color: var(--text-1); }
+.selected-icon { color: var(--accent); }
 .detail-section { display: flex; flex-direction: column; gap: 10px; }
 .detail-item { }
 .detail-label { font-size: 12px; color: var(--text-2); font-weight: 600; }

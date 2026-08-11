@@ -169,10 +169,16 @@ function clampRightPanel(w: number) {
 
 function restorePanelWidths() {
   try {
-    const l = Number(localStorage.getItem("panel-left-width"));
-    if (Number.isFinite(l)) leftPanelWidth.value = clampLeftPanel(l);
-    const r = Number(localStorage.getItem("panel-right-width"));
-    if (Number.isFinite(r)) rightPanelWidth.value = clampRightPanel(r);
+    const lRaw = localStorage.getItem("panel-left-width");
+    if (lRaw !== null) {
+      const l = Number(lRaw);
+      if (Number.isFinite(l)) leftPanelWidth.value = clampLeftPanel(l);
+    }
+    const rRaw = localStorage.getItem("panel-right-width");
+    if (rRaw !== null) {
+      const r = Number(rRaw);
+      if (Number.isFinite(r)) rightPanelWidth.value = clampRightPanel(r);
+    }
   } catch {}
 }
 
@@ -317,9 +323,9 @@ onBeforeUnmount(() => {
   z-index: 20;
 }
 
-/* macOS：为左上角红绿灯按钮预留空间（标题栏透明叠加） */
+/* macOS：为左上角红绿灯按钮预留空间（标题栏透明叠加，70px 覆盖三颗按钮） */
 .app-header.is-mac {
-  padding-left: 84px;
+  padding-left: 70px;
 }
 
 /* 头部按钮需可点击（不被窗口拖拽拦截） */
@@ -353,18 +359,30 @@ onBeforeUnmount(() => {
 
 .header-center {
   flex: 1;
+  min-width: 0;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .project-name {
   font-size: 14px;
   color: var(--accent);
   font-weight: 500;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .no-project {
   font-size: 13px;
   color: var(--text-3);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .storage-picker {
