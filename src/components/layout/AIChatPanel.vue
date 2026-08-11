@@ -154,6 +154,45 @@
 
     <!-- 输入区域 -->
     <div class="chat-input-area">
+      <!-- @提及技能浮层 -->
+      <div
+        v-if="mentionVisible"
+        class="mention-popover"
+        @mousedown.prevent
+      >
+        <div class="mention-title">
+          <el-icon><Icon icon="lucide:sparkles" /></el-icon> 选择技能（@ 应用）
+        </div>
+        <div
+          v-for="(skill, idx) in mentionSkills"
+          :key="skill.id"
+          class="mention-item"
+          :class="{ active: idx === mentionIndex }"
+          @mousedown="selectMention(skill)"
+        >
+          <span class="mention-icon">
+            <Icon v-if="skill.icon" :icon="skill.icon" :width="16" :height="16" />
+            <span v-else>{{ skill.emoji }}</span>
+          </span>
+          <span class="mention-name">{{ skill.name }}</span>
+          <el-tag
+            v-if="skill.source === 'builtin'"
+            size="small"
+            type="primary"
+            effect="plain"
+            class="mention-source"
+          >官方</el-tag>
+          <el-tag
+            v-else
+            size="small"
+            type="warning"
+            effect="plain"
+            class="mention-source"
+          >自定义</el-tag>
+        </div>
+        <div v-if="mentionSkills.length === 0" class="mention-empty">没有匹配的技能</div>
+      </div>
+
       <!-- 技能状态条 -->
       <div v-if="skillStore.activeSkill" class="skill-status">
         <el-tag size="small" type="success" effect="light" closable @close="skillStore.selectSkill(null)">
@@ -167,6 +206,7 @@
         :placeholder="inputPlaceholder"
         :disabled="aiStore.isGenerating"
         @keydown="handleKeydown"
+        @input="handleInput"
       />
       <div class="input-actions">
         <div class="model-info">
@@ -248,7 +288,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, nextTick, watch } from "vue";
+import { ref, reactive, computed, nextTick, watch, onMounted, onBeforeUnmount } from "vue";
 import { ElMessage } from "element-plus";
 import { invoke } from "@tauri-apps/api/core";
 import type { Character } from "@/types";
@@ -279,6 +319,23 @@ const showOOCDialog = ref(false);
 const showOOCResult = ref("");
 const oocSummary = ref("");
 const messagesRef = ref<HTMLElement | null>(null);
+
+// ===== @提及技能 =====
+const mentionVisible = ref(false);
+const mentionIndex = ref(0);
+const mentionKeyword = ref("");
+const mentionCaret = ref(0);
+const mentionAtIdx = ref(-1);
+const mentionSkills = computed(() => {
+  const kw = mentionKeyword.value.trim().toLowerCase();
+  const list = skillStore.allSkills;
+  if (!kw) return list;
+  return list.filter(
+    (s) =>
+      s.name.toLowerCase().includes(kw) ||
+      (s.description || "").toLowerCase().includes(kw)
+  );
+});
 
 const suggestions = computed(() => {
   const base = ["帮我写一个大纲", "生成一个人物设定", "续写当前章节", "检查剧情漏洞"];
@@ -329,6 +386,7 @@ watch(
 
 async function handleSend() {
   if (!inputText.value.trim() || aiStore.isGenerating) return;
+  closeMention();
   const text = inputText.value;
   inputText.value = "";
 
@@ -586,7 +644,91 @@ async function sendSuggestion(text: string) {
   await handleSend();
 }
 
+// ===== @提及技能 =====
+// 输入内容变化时检测 @ 触发浮层
+function handleInput(evt: Event) {
+  // 取光标前的文本，找到最后一个 @ 作为触发点
+  const el = evt.target as HTMLTextAreaElement | null;
+  const text = inputText.value;
+  const caret = el?.selectionStart ?? text.length;
+  const before = text.slice(0, caret);
+  const atIdx = before.lastIndexOf("@");
+  // 要求 @ 前面是开头或非字母数字（避免邮箱 / 连续 @@ 误触发，中文、标点、空白均可触发）
+  if (atIdx >= 0 && (atIdx === 0 || !/[a-zA-Z0-9]/.test(before[atIdx - 1]))) {
+    const kw = before.slice(atIdx + 1);
+    // @ 后面紧跟非空内容（没有空格/换行）才视为关键字
+    if (!/[\s\n]/.test(kw)) {
+      mentionKeyword.value = kw;
+      mentionIndex.value = 0;
+      // 缓存光标位置，浮层打开后 textarea 可能失焦，selectionStart 会失效
+      mentionCaret.value = caret;
+      mentionAtIdx.value = atIdx;
+      mentionVisible.value = true;
+      return;
+    }
+  }
+  mentionVisible.value = false;
+}
+
+// 选中某个技能：插入 @技能名 并替换当前激活技能
+function selectMention(skill: any) {
+  const text = inputText.value;
+  const caret = mentionCaret.value;
+  const atIdx = mentionAtIdx.value;
+  const before = text.slice(0, caret);
+  const after = text.slice(caret);
+  // 用 @技能名 替换 @关键字
+  const mention = `@${skill.name}`;
+  const prefix = atIdx >= 0 ? before.slice(0, atIdx) : before;
+  inputText.value = `${prefix}${mention}${after}`;
+  closeMention();
+  // 替换当前激活技能，让该技能生效
+  skillStore.selectSkill(skill.id);
+  ElMessage.success(`已应用技能「${skill.name}」`);
+  // 聚焦回输入框并把光标放在 mention 之后
+  nextTick(() => {
+    const ta = document.querySelector(".chat-input-area textarea") as HTMLTextAreaElement | null;
+    const pos = prefix.length + mention.length;
+    ta?.focus();
+    ta?.setSelectionRange(pos, pos);
+  });
+}
+
+// 关闭 @提及浮层
+function closeMention() {
+  mentionVisible.value = false;
+  mentionKeyword.value = "";
+}
+
 function handleKeydown(event: KeyboardEvent) {
+  // @提及浮层打开时：方向键选择 + Enter 确认 + Esc 关闭
+  if (mentionVisible.value) {
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      mentionIndex.value =
+        (mentionIndex.value - 1 + mentionSkills.value.length) %
+        Math.max(mentionSkills.value.length, 1);
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      mentionIndex.value = (mentionIndex.value + 1) % Math.max(mentionSkills.value.length, 1);
+      return;
+    }
+    if (event.key === "Enter" && !event.isComposing) {
+      const skill = mentionSkills.value[mentionIndex.value];
+      if (skill) {
+        event.preventDefault();
+        selectMention(skill);
+        return;
+      }
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMention();
+      return;
+    }
+  }
   // Ctrl+Enter / Cmd+Enter 发送
   if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
     event.preventDefault();
@@ -600,6 +742,16 @@ async function scrollToBottom() {
     messagesRef.value.scrollTop = messagesRef.value.scrollHeight;
   }
 }
+
+// 点击输入区外部关闭 @提及浮层
+function onDocClick(e: MouseEvent) {
+  if (!mentionVisible.value) return;
+  const target = e.target as HTMLElement | null;
+  if (target?.closest(".chat-input-area")) return;
+  closeMention();
+}
+onMounted(() => document.addEventListener("mousedown", onDocClick));
+onBeforeUnmount(() => document.removeEventListener("mousedown", onDocClick));
 </script>
 
 <style scoped>
@@ -779,9 +931,72 @@ async function scrollToBottom() {
 }
 
 .chat-input-area {
+  position: relative;
   padding: 12px 16px;
   border-top: 1px solid var(--border);
   background: var(--panel-bg-2);
+}
+
+/* ===== @提及技能浮层 ===== */
+.mention-popover {
+  position: absolute;
+  bottom: calc(100% - 8px);
+  left: 16px;
+  right: 16px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--panel-bg, #fff);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 30;
+  padding: 4px;
+}
+.mention-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary, #909399);
+  padding: 6px 8px 4px;
+}
+.mention-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary, #303133);
+}
+.mention-item:hover {
+  background: var(--hover-bg, #f5f7fa);
+}
+.mention-item.active {
+  background: var(--primary-color, #409eff);
+  color: #fff;
+}
+.mention-icon {
+  display: inline-flex;
+  width: 20px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.mention-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mention-source {
+  flex-shrink: 0;
+}
+.mention-empty {
+  padding: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary, #909399);
 }
 
 .chat-input-area :deep(.el-textarea__inner) {

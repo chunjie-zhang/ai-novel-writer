@@ -1,14 +1,20 @@
 <template>
   <div class="skill-selector">
-    <!-- 搜索框 -->
-    <div class="ss-search">
+    <!-- 顶部：搜索 + 管理入口 -->
+    <div class="ss-toolbar">
       <el-input
         v-model="skillStore.searchQuery"
         placeholder="搜索技能..."
         size="small"
         clearable
         prefix-icon="Search"
+        class="ss-search"
       />
+      <el-tooltip content="技能市场：导入 / 导出 / 管理自定义技能" placement="bottom">
+        <el-button size="small" class="ss-manage-btn" @click="showManager = true">
+          <el-icon><Icon icon="lucide:store" /></el-icon>
+        </el-button>
+      </el-tooltip>
     </div>
 
     <!-- 分类标签 -->
@@ -48,6 +54,7 @@
             <Icon :icon="SKILL_CATEGORIES[category as keyof typeof SKILL_CATEGORIES]?.icon" />
           </el-icon>
           {{ SKILL_CATEGORIES[category as keyof typeof SKILL_CATEGORIES]?.label }}
+          <span class="ss-group-count">{{ skills.length }}</span>
         </div>
 
         <div
@@ -62,7 +69,23 @@
             <span v-else>{{ skill.emoji }}</span>
           </div>
           <div class="ss-item-body">
-            <div class="ss-item-name">{{ skill.name }}</div>
+            <div class="ss-item-name-row">
+              <span class="ss-item-name">{{ skill.name }}</span>
+              <el-tag
+                v-if="skill.source === 'builtin'"
+                size="small"
+                type="primary"
+                effect="plain"
+                class="ss-source-tag"
+              >官方</el-tag>
+              <el-tag
+                v-else
+                size="small"
+                type="warning"
+                effect="plain"
+                class="ss-source-tag"
+              >自定义</el-tag>
+            </div>
             <div class="ss-item-desc">{{ skill.description }}</div>
             <div class="ss-item-tags">
               <el-tag
@@ -74,20 +97,27 @@
               >
                 {{ tag }}
               </el-tag>
+              <span v-if="skill.author" class="ss-author">{{ skill.author }}</span>
             </div>
           </div>
         </div>
       </template>
     </div>
+
+    <!-- 技能市场管理弹窗 -->
+    <SkillManagerDialog v-model:visible="showManager" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import { Icon } from "@iconify/vue";
 import { useSkillStore } from "@/skills/store";
 import { SKILL_CATEGORIES } from "@/skills/types";
+import SkillManagerDialog from "@/components/ai/SkillManagerDialog.vue";
 
 const skillStore = useSkillStore();
+const showManager = ref(false);
 </script>
 
 <style scoped>
@@ -97,8 +127,20 @@ const skillStore = useSkillStore();
   gap: 8px;
 }
 
-.ss-search {
+.ss-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 0 4px;
+}
+
+.ss-search {
+  flex: 1;
+  min-width: 0;
+}
+
+.ss-manage-btn {
+  flex-shrink: 0;
 }
 
 .ss-categories {
@@ -140,6 +182,13 @@ const skillStore = useSkillStore();
   margin-top: 4px;
 }
 
+.ss-group-count {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+  margin-left: 4px;
+}
+
 .ss-item {
   display: flex;
   gap: 10px;
@@ -159,13 +208,13 @@ const skillStore = useSkillStore();
 }
 
 .ss-item-icon {
-  font-size: 24px;
-  line-height: 1;
-  flex-shrink: 0;
-  padding-top: 2px;
-  color: var(--accent);
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
 }
 
 .ss-item-body {
@@ -173,24 +222,37 @@ const skillStore = useSkillStore();
   min-width: 0;
 }
 
+.ss-item-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .ss-item-name {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-1);
-  margin-bottom: 2px;
+}
+
+.ss-source-tag {
+  flex-shrink: 0;
 }
 
 .ss-item-desc {
   font-size: 12px;
   color: var(--text-2);
-  line-height: 1.4;
-  margin-bottom: 4px;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ss-item-tags {
   display: flex;
-  flex-wrap: wrap;
   gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .ss-tag {
@@ -198,5 +260,10 @@ const skillStore = useSkillStore();
   height: auto !important;
   line-height: 1.4 !important;
   padding: 0 4px !important;
+}
+
+.ss-author {
+  font-size: 11px;
+  color: var(--text-3);
 }
 </style>

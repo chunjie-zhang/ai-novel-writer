@@ -112,6 +112,7 @@ import { ref, onMounted, onBeforeUnmount } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useProjectStore } from "@/stores/project";
 import { useAIStore } from "@/stores/ai";
+import { useSkillStore } from "@/skills/store";
 import ProjectTree from "@/components/layout/ProjectTree.vue";
 import MainEditor from "@/components/layout/MainEditor.vue";
 import AIChatPanel from "@/components/layout/AIChatPanel.vue";
@@ -124,6 +125,7 @@ import { useThemeStore } from "@/stores/theme";
 const projectStore = useProjectStore();
 const aiStore = useAIStore();
 const themeStore = useThemeStore();
+const skillStore = useSkillStore();
 
 // macOS：系统标题栏已设为 Overlay 透明，需为左上角红绿灯按钮预留空间
 const isMac = ref(
@@ -276,6 +278,9 @@ onMounted(async () => {
   aiStore.initFromDisk();
   // 初始化主题（跟随系统 / 白天 / 黑夜）
   themeStore.init();
+  // 加载用户自定义技能（技能市场）
+  skillStore.loadCustomSkills();
+  skillStore.loadSkillsDir();
   // 恢复面板宽度 + 注册拖拽监听
   restorePanelWidths();
   document.addEventListener("mousemove", onMouseMove);

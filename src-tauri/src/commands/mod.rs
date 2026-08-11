@@ -3,9 +3,11 @@ pub mod file;
 pub mod ai;
 pub mod import;
 pub mod config;
+pub mod skill;
 
 pub use project::*;
 pub use file::*;
 pub use ai::*;
 pub use import::*;
 pub use config::*;
+pub use skill::*;

@@ -1,10 +1,10 @@
 import type { WritingSkill } from "./types";
 
 /**
- * 内置小说写作技能集合
+ * 内置小说写作技能集合（原始定义，导出时统一标记 source:"builtin"）
  * 仿 @actalk/inkos 模式：每个 skill = 专门的 Agent prompt
  */
-export const BUILTIN_SKILLS: WritingSkill[] = [
+const _BUILTIN_SKILLS_DEFS: Omit<WritingSkill, "source">[] = [
   // ==================== 🌍 世界观 ====================
   {
     id: "world-build",
@@ -783,6 +783,12 @@ export const BUILTIN_SKILLS: WritingSkill[] = [
 4. 可以引用原文作为依据`,
   },
 ];
+
+// 统一为所有内置技能标记「官方内置」来源（source: "builtin"）
+export const BUILTIN_SKILLS: WritingSkill[] = _BUILTIN_SKILLS_DEFS.map((s) => ({
+  ...s,
+  source: "builtin",
+}));
 
 /** 按分类组织技能 */
 export function getSkillsByCategory(): Record<string, WritingSkill[]> {

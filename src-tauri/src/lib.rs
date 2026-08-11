@@ -38,6 +38,12 @@ pub fn run() {
             commands::delete_character,
             commands::save_world,
             commands::delete_backup,
+            commands::list_custom_skills,
+            commands::save_custom_skill,
+            commands::delete_custom_skill,
+            commands::get_skills_dir_path,
+            commands::import_skill_zip,
+            commands::export_skill_zip,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

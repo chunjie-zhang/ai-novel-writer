@@ -13,6 +13,9 @@ export type SkillCategory =
   | "translate"  // 翻译
   | "utils";     // 工具
 
+/** 技能来源 */
+export type SkillSource = "builtin" | "custom";
+
 /** 技能分类元信息 */
 export const SKILL_CATEGORIES: Record<SkillCategory, { label: string; emoji: string; icon: string; desc: string }> = {
   world:     { label: "世界观", emoji: "🌍", icon: "lucide:globe", desc: "世界构建、势力设定、地理环境" },
@@ -54,6 +57,18 @@ export interface WritingSkill {
   enabled: boolean;
   /** 版本 */
   version: string;
+  /** 技能来源：builtin=官方内置，custom=用户上传/自定义 */
+  source: SkillSource;
+  /** 作者（自定义技能） */
+  author?: string;
+  /** 技能描述/主页链接（自定义技能） */
+  homepage?: string;
+  /** 安装时间（ISO，自定义技能） */
+  installedAt?: string;
+  /** 技能原始文件内容（SKILL.md body，自定义技能；内置技能为 null） */
+  body?: string;
+  /** 技能目录下配套的资源文件（js 脚本等），仅自定义技能有 */
+  resources?: string[];
 }
 
 /** 技能参数上下文（调用技能时注入的变量） */
