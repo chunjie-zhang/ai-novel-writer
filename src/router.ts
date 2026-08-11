@@ -13,6 +13,11 @@ const router = createRouter({
       name: "settings",
       component: () => import("@/views/Settings.vue"),
     },
+    {
+      path: "/skills",
+      name: "skills",
+      component: () => import("@/views/SkillMarket.vue"),
+    },
   ],
 });
 

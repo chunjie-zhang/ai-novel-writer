@@ -10,8 +10,8 @@
         prefix-icon="Search"
         class="ss-search"
       />
-      <el-tooltip content="技能市场：导入 / 导出 / 管理自定义技能" placement="bottom">
-        <el-button size="small" class="ss-manage-btn" @click="showManager = true">
+      <el-tooltip content="技能市场：浏览 / 导入 / 管理技能" placement="bottom">
+        <el-button size="small" class="ss-manage-btn" @click="router.push('/skills')">
           <el-icon><Icon icon="lucide:store" /></el-icon>
         </el-button>
       </el-tooltip>
@@ -103,21 +103,17 @@
         </div>
       </template>
     </div>
-
-    <!-- 技能市场管理弹窗 -->
-    <SkillManagerDialog v-model:visible="showManager" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { useRouter } from "vue-router";
 import { Icon } from "@iconify/vue";
 import { useSkillStore } from "@/skills/store";
 import { SKILL_CATEGORIES } from "@/skills/types";
-import SkillManagerDialog from "@/components/ai/SkillManagerDialog.vue";
 
 const skillStore = useSkillStore();
-const showManager = ref(false);
+const router = useRouter();
 </script>
 
 <style scoped>

@@ -13,16 +13,6 @@
             <el-icon><Icon icon="lucide:upload" /></el-icon>
           </el-button>
         </el-tooltip>
-        <el-tooltip content="写作技能" placement="bottom">
-          <el-button
-            text
-            size="small"
-            :type="showSkills ? 'primary' : ''"
-            @click="showSkills = !showSkills"
-          >
-            <el-icon><Icon icon="lucide:sparkles" /></el-icon>
-          </el-button>
-        </el-tooltip>
         <el-tooltip content="清空对话" placement="bottom">
           <el-button text size="small" @click="handleClear">
             <el-icon><Icon icon="lucide:trash-2" /></el-icon>
@@ -55,39 +45,6 @@
       </div>
     </div>
 
-    <!-- 技能选择面板（折叠式） -->
-    <div v-if="showSkills" class="skills-panel">
-      <div class="skills-panel-header">
-        <span class="skills-panel-title">
-          {{ skillStore.activeSkill ? '当前技能' : '选择写作技能' }}
-        </span>
-        <el-button
-          v-if="skillStore.activeSkill"
-          text
-          size="small"
-          type="warning"
-          @click="skillStore.selectSkill(null)"
-        >
-          取消
-        </el-button>
-      </div>
-
-      <!-- 已选技能提示 -->
-      <div v-if="skillStore.activeSkill" class="active-skill-banner">
-        <span class="as-emoji">
-          <Icon v-if="activeSkillIcon" :icon="activeSkillIcon" :width="20" :height="20" />
-          <span v-else>{{ skillStore.activeSkill.emoji }}</span>
-        </span>
-        <div class="as-info">
-          <span class="as-name">{{ skillStore.activeSkill.name }}</span>
-          <span class="as-desc">{{ skillStore.activeSkill.description }}</span>
-        </div>
-        <el-tag size="small" type="success" effect="dark">已启用</el-tag>
-      </div>
-
-      <SkillSelector />
-    </div>
-
     <!-- 对话消息列表 -->
     <div class="chat-messages" ref="messagesRef">
       <div v-if="aiStore.messages.length === 0" class="chat-hint">
@@ -98,7 +55,7 @@
             当前技能：<Icon v-if="activeSkillIcon" :icon="activeSkillIcon" :width="14" :height="14" style="vertical-align:-2px" /> {{ skillStore.activeSkill.name }}
           </template>
           <template v-else>
-            选择技能或直接输入需求<br />
+            输入 @ 快速选择技能，或直接输入需求<br />
             写大纲 · 写人设 · 改剧情 · 填坑 · 纠错
           </template>
         </p>
@@ -296,7 +253,6 @@ import { useAIStore } from "@/stores/ai";
 import { useSkillStore } from "@/skills/store";
 import { useReferenceStore } from "@/stores/reference";
 import { useWritingStore } from "@/stores/writing";
-import SkillSelector from "@/components/ai/SkillSelector.vue";
 import NovelImportDialog from "@/components/novel/NovelImportDialog.vue";
 import { useProjectStore } from "@/stores/project";
 import { useEditorStore } from "@/stores/editor";
@@ -313,7 +269,6 @@ const projectStore = useProjectStore();
 const editorStore = useEditorStore();
 
 const inputText = ref("");
-const showSkills = ref(false);
 const showImport = ref(false);
 const showOOCDialog = ref(false);
 const showOOCResult = ref("");
@@ -358,13 +313,6 @@ const inputPlaceholder = computed(() => {
     return `输入你的${skillStore.activeSkill.name}需求...`;
   }
   return "输入你的创作需求...";
-});
-
-// 当选中技能时折叠面板
-watch(() => skillStore.activeSkillId, () => {
-  if (skillStore.activeSkill) {
-    showSkills.value = false;
-  }
 });
 
 // 切换小说时，加载该小说的历史会话（每本小说独立记忆）
@@ -1012,61 +960,6 @@ onBeforeUnmount(() => document.removeEventListener("mousedown", onDocClick));
 
 .model-info {
   font-size: 12px;
-}
-
-/* ===== 技能面板样式 ===== */
-.skills-panel {
-  border-bottom: 1px solid var(--border);
-  max-height: 480px;
-  overflow-y: auto;
-  padding: 8px 12px;
-  background: var(--panel-bg-2);
-}
-
-.skills-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.skills-panel-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-}
-
-.active-skill-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--green-soft);
-  border: 1px solid rgba(70, 208, 127, 0.3);
-  border-radius: 8px;
-  margin-bottom: 8px;
-}
-
-.as-emoji {
-  font-size: 20px;
-}
-
-.as-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.as-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-1);
-}
-
-.as-desc {
-  font-size: 11px;
-  color: var(--text-2);
 }
 
 .skill-status {

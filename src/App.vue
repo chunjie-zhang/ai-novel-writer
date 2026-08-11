@@ -1,5 +1,8 @@
 <template>
-  <div class="app-container" :class="{ 'focus-mode': isFocusMode }">
+  <!-- 技能市场独立页面 -->
+  <SkillMarket v-if="isSkillMarketPage" />
+
+  <div v-else class="app-container" :class="{ 'focus-mode': isFocusMode }">
     <!-- 顶部标题栏（macOS Overlay 下充当标题栏拖拽区） -->
     <header
       class="app-header"
@@ -16,15 +19,26 @@
         <span v-else class="no-project">未选择项目</span>
       </div>
       <div class="header-right">
-        <el-button text circle @click="showGuide = true" title="新手引导 / 帮助">
-          <el-icon><Icon icon="lucide:circle-question-mark" /></el-icon>
-        </el-button>
-        <el-button text circle @click="showNewProject = true" title="新建项目">
-          <el-icon><Icon icon="lucide:folder-plus" /></el-icon>
-        </el-button>
-        <el-button text circle @click="showSettings = true" title="设置">
-          <el-icon><Icon icon="lucide:settings" /></el-icon>
-        </el-button>
+        <el-tooltip content="技能市场" placement="bottom">
+          <el-button text circle @click="openSkillMarket">
+            <el-icon><Icon icon="lucide:store" /></el-icon>
+          </el-button>
+        </el-tooltip>
+        <el-tooltip content="新手引导 / 帮助" placement="bottom">
+          <el-button text circle @click="showGuide = true">
+            <el-icon><Icon icon="lucide:circle-question-mark" /></el-icon>
+          </el-button>
+        </el-tooltip>
+        <el-tooltip content="新建项目" placement="bottom">
+          <el-button text circle @click="showNewProject = true">
+            <el-icon><Icon icon="lucide:folder-plus" /></el-icon>
+          </el-button>
+        </el-tooltip>
+        <el-tooltip content="设置" placement="bottom">
+          <el-button text circle @click="showSettings = true">
+            <el-icon><Icon icon="lucide:settings" /></el-icon>
+          </el-button>
+        </el-tooltip>
       </div>
     </header>
 
@@ -108,7 +122,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { useProjectStore } from "@/stores/project";
 import { useAIStore } from "@/stores/ai";
@@ -116,6 +131,7 @@ import { useSkillStore } from "@/skills/store";
 import ProjectTree from "@/components/layout/ProjectTree.vue";
 import MainEditor from "@/components/layout/MainEditor.vue";
 import AIChatPanel from "@/components/layout/AIChatPanel.vue";
+import SkillMarket from "@/views/SkillMarket.vue";
 import ModelConfig from "@/components/ai/ModelConfig.vue";
 import StorageSettings from "@/components/ai/StorageSettings.vue";
 import AppearanceSettings from "@/components/ai/AppearanceSettings.vue";
@@ -126,6 +142,16 @@ const projectStore = useProjectStore();
 const aiStore = useAIStore();
 const themeStore = useThemeStore();
 const skillStore = useSkillStore();
+const route = useRoute();
+const router = useRouter();
+
+/** 是否为技能市场独立页面（单独整页渲染） */
+const isSkillMarketPage = computed(() => route.path === "/skills");
+
+/** 打开技能市场独立页面 */
+function openSkillMarket() {
+  router.push("/skills");
+}
 
 // macOS：系统标题栏已设为 Overlay 透明，需为左上角红绿灯按钮预留空间
 const isMac = ref(
