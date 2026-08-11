@@ -51,8 +51,10 @@
         <div class="hint-icon"><Icon icon="lucide:bot" :width="44" :height="44" /></div>
         <p>AI 创作助手</p>
         <p class="hint-sub">
-          <template v-if="skillStore.activeSkill">
-            当前技能：<Icon v-if="activeSkillIcon" :icon="activeSkillIcon" :width="14" :height="14" style="vertical-align:-2px" /> {{ skillStore.activeSkill.name }}
+          <template v-if="skillStore.activeSkills.length">
+            当前技能：<template v-for="(s, i) in skillStore.activeSkills" :key="s.id">
+              <Icon v-if="s.icon" :icon="s.icon" :width="14" :height="14" style="vertical-align:-2px" />{{ s.name }}<template v-if="i < skillStore.activeSkills.length - 1">、</template>
+            </template>
           </template>
           <template v-else>
             输入 @ 快速选择技能，或直接输入需求<br />
@@ -150,10 +152,24 @@
         <div v-if="mentionSkills.length === 0" class="mention-empty">没有匹配的技能</div>
       </div>
 
-      <!-- 技能状态条 -->
-      <div v-if="skillStore.activeSkill" class="skill-status">
-        <el-tag size="small" type="success" effect="light" closable @close="skillStore.selectSkill(null)">
-          <Icon v-if="activeSkillIcon" :icon="activeSkillIcon" :width="14" :height="14" style="vertical-align:-2px" /> {{ skillStore.activeSkill.name }}
+      <!-- 技能状态条（多技能横排，图标文字一行） -->
+      <div v-if="skillStore.activeSkills.length" class="skill-status">
+        <span class="skill-status-label">技能</span>
+        <el-tag
+          v-for="skill in skillStore.activeSkills"
+          :key="skill.id"
+          size="small"
+          type="success"
+          effect="light"
+          closable
+          class="skill-status-tag"
+          @close="skillStore.removeActiveSkill(skill.id)"
+        >
+          <span class="skill-status-inner">
+            <Icon v-if="skill.icon" :icon="skill.icon" :width="13" :height="13" class="skill-status-icon" />
+            <span v-else class="skill-status-icon">{{ skill.emoji }}</span>
+            <span class="skill-status-name">{{ skill.name }}</span>
+          </span>
         </el-tag>
       </div>
       <el-input
@@ -261,8 +277,6 @@ import { normalizeChapterTitle } from "@/utils/chapterTitle";
 
 const aiStore = useAIStore();
 const skillStore = useSkillStore();
-// 当前技能图标（lucide 图标，缺省回退 emoji）
-const activeSkillIcon = computed(() => skillStore.activeSkill?.icon || null);
 const refStore = useReferenceStore();
 const writingStore = useWritingStore();
 const projectStore = useProjectStore();
@@ -376,8 +390,12 @@ async function handleSend() {
     systemPrompt = writingStore.currentScene.systemPrompt;
   } else if (refStore.writingMode && refStore.hasAnalysis) {
     systemPrompt = refStore.getModeSystemPrompt();
-  } else if (skillStore.activeSkill) {
-    systemPrompt = skillStore.activeSkill.systemPrompt;
+  } else if (skillStore.activeSkills.length > 0) {
+    // 多技能：合并每个技能的 systemPrompt，让 AI 同时遵循多个技能的指令
+    const parts = skillStore.activeSkills.map((s, i) =>
+      `【技能 ${i + 1}：${s.name}】\n${s.systemPrompt}`
+    );
+    systemPrompt = parts.join("\n\n");
   }
 
   // 拼接文风采样
@@ -618,25 +636,25 @@ function handleInput(evt: Event) {
   mentionVisible.value = false;
 }
 
-// 选中某个技能：插入 @技能名 并替换当前激活技能
+// 选中某个技能：清掉 @ 及关键字（技能名已显示在输入框上方状态条），并加入当前激活技能（可多选，再次选择取消）
 function selectMention(skill: any) {
   const text = inputText.value;
   const caret = mentionCaret.value;
   const atIdx = mentionAtIdx.value;
   const before = text.slice(0, caret);
   const after = text.slice(caret);
-  // 用 @技能名 替换 @关键字
-  const mention = `@${skill.name}`;
+  // 只移除 @ 及关键字，不把技能名写进输入框
   const prefix = atIdx >= 0 ? before.slice(0, atIdx) : before;
-  inputText.value = `${prefix}${mention}${after}`;
+  inputText.value = `${prefix}${after}`;
   closeMention();
-  // 替换当前激活技能，让该技能生效
+  // 加入当前激活技能列表（追加/切换）
   skillStore.selectSkill(skill.id);
-  ElMessage.success(`已应用技能「${skill.name}」`);
-  // 聚焦回输入框并把光标放在 mention 之后
+  const isActive = skillStore.activeSkillIds.includes(skill.id);
+  ElMessage.success(isActive ? `已启用技能「${skill.name}」` : `已取消技能「${skill.name}」`);
+  // 聚焦回输入框并把光标放在原来 @ 的位置
   nextTick(() => {
     const ta = document.querySelector(".chat-input-area textarea") as HTMLTextAreaElement | null;
-    const pos = prefix.length + mention.length;
+    const pos = prefix.length;
     ta?.focus();
     ta?.setSelectionRange(pos, pos);
   });
@@ -963,7 +981,39 @@ onBeforeUnmount(() => document.removeEventListener("mousedown", onDocClick));
 }
 
 .skill-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 6px;
+}
+
+.skill-status-label {
+  font-size: 11px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.skill-status-tag {
+  max-width: 100%;
+}
+
+.skill-status-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+}
+
+.skill-status-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
+.skill-status-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ===== 参考小说状态栏 ===== */

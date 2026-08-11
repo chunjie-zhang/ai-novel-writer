@@ -12,8 +12,8 @@ import {
 
 export const useSkillStore = defineStore("skill", () => {
   // ===== 状态 =====
-  /** 当前选中的技能 */
-  const activeSkillId = ref<string | null>(null);
+  /** 当前选中的技能（支持多个，@ 可连续添加） */
+  const activeSkillIds = ref<string[]>([]);
   /** 用户启用的技能 ID 列表（null = 全部启用） */
   const enabledSkillIds = ref<Set<string> | null>(null);
   /** 搜索关键词 */
@@ -34,11 +34,15 @@ export const useSkillStore = defineStore("skill", () => {
   /** 当前所有可用技能 = 内置 + 自定义 */
   const allSkills = computed(() => [...builtinSkills.value, ...customSkills.value]);
 
-  /** 当前激活的技能对象 */
-  const activeSkill = computed<WritingSkill | null>(() => {
-    if (!activeSkillId.value) return null;
-    return allSkills.value.find((s) => s.id === activeSkillId.value) ?? null;
-  });
+  /** 当前激活的所有技能对象（多技能） */
+  const activeSkills = computed<WritingSkill[]>(() =>
+    activeSkillIds.value
+      .map((id) => allSkills.value.find((s) => s.id === id))
+      .filter((s): s is WritingSkill => !!s)
+  );
+
+  /** 当前激活的第一个技能（兼容单技能场景） */
+  const activeSkill = computed<WritingSkill | null>(() => activeSkills.value[0] ?? null);
 
   /** 按分类组织的技能（过滤后） */
   const categorizedSkills = computed(() => {
@@ -138,8 +142,8 @@ export const useSkillStore = defineStore("skill", () => {
       console.error("删除自定义技能失败:", e);
     }
     // 若删除的是当前选中技能，清除选中
-    if (activeSkillId.value === skill.id) {
-      activeSkillId.value = null;
+    if (activeSkillIds.value.includes(skill.id)) {
+      activeSkillIds.value = activeSkillIds.value.filter((id) => id !== skill.id);
     }
     await loadCustomSkills();
   }
@@ -166,9 +170,24 @@ export const useSkillStore = defineStore("skill", () => {
   }
 
   // ===== 方法 =====
-  /** 选中一个技能 */
+  /** 选中技能：null=清空全部；传 id=只保留该技能（替换）；已存在则移除（切换） */
   function selectSkill(skillId: string | null) {
-    activeSkillId.value = skillId;
+    if (skillId === null) {
+      activeSkillIds.value = [];
+      return;
+    }
+    // 已激活则移除（切换取消）
+    if (activeSkillIds.value.includes(skillId)) {
+      activeSkillIds.value = activeSkillIds.value.filter((id) => id !== skillId);
+      return;
+    }
+    // 追加该技能（多技能并存）
+    activeSkillIds.value = [...activeSkillIds.value, skillId];
+  }
+
+  /** 移除一个已激活技能（不影响其他技能） */
+  function removeActiveSkill(skillId: string) {
+    activeSkillIds.value = activeSkillIds.value.filter((id) => id !== skillId);
   }
 
   /** 切换分类筛选 */
@@ -196,14 +215,15 @@ export const useSkillStore = defineStore("skill", () => {
 
   /** 重置为默认状态 */
   function reset() {
-    activeSkillId.value = null;
+    activeSkillIds.value = [];
     enabledSkillIds.value = null;
     searchQuery.value = "";
     activeCategory.value = null;
   }
 
   return {
-    activeSkillId,
+    activeSkillIds,
+    activeSkills,
     activeSkill,
     searchQuery,
     activeCategory,
@@ -216,6 +236,7 @@ export const useSkillStore = defineStore("skill", () => {
     isLoading,
     skillsDir,
     selectSkill,
+    removeActiveSkill,
     setCategory,
     setSearch,
     toggleSkill,

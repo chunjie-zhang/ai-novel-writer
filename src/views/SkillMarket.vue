@@ -76,7 +76,7 @@
             v-for="skill in filteredBuiltin"
             :key="skill.id"
             class="smp-card"
-            :class="{ active: skillStore.activeSkillId === skill.id }"
+            :class="{ active: skillStore.activeSkillIds.includes(skill.id) }"
           >
             <div class="smp-card-top">
               <div class="smp-card-icon">
@@ -97,11 +97,11 @@
               </span>
               <el-button
                 size="small"
-                :type="skillStore.activeSkillId === skill.id ? 'success' : 'primary'"
-                :plain="skillStore.activeSkillId !== skill.id"
+                :type="skillStore.activeSkillIds.includes(skill.id) ? 'success' : 'primary'"
+                :plain="!skillStore.activeSkillIds.includes(skill.id)"
                 @click="applySkill(skill)"
               >
-                {{ skillStore.activeSkillId === skill.id ? '使用中' : '使用' }}
+                {{ skillStore.activeSkillIds.includes(skill.id) ? '使用中' : '使用' }}
               </el-button>
             </div>
           </div>
@@ -127,7 +127,7 @@
             v-for="skill in filteredCustom"
             :key="skill.id"
             class="smp-card smp-card-custom"
-            :class="{ active: skillStore.activeSkillId === skill.id }"
+            :class="{ active: skillStore.activeSkillIds.includes(skill.id) }"
           >
             <div class="smp-card-top">
               <div class="smp-card-icon">
@@ -158,11 +158,11 @@
               </div>
               <el-button
                 size="small"
-                :type="skillStore.activeSkillId === skill.id ? 'success' : 'primary'"
-                :plain="skillStore.activeSkillId !== skill.id"
+                :type="skillStore.activeSkillIds.includes(skill.id) ? 'success' : 'primary'"
+                :plain="!skillStore.activeSkillIds.includes(skill.id)"
                 @click="applySkill(skill)"
               >
-                {{ skillStore.activeSkillId === skill.id ? '使用中' : '使用' }}
+                {{ skillStore.activeSkillIds.includes(skill.id) ? '使用中' : '使用' }}
               </el-button>
             </div>
           </div>
@@ -240,10 +240,11 @@ function goBack() {
   }
 }
 
-/** 应用技能：设为当前激活技能 */
+/** 应用技能：加入当前激活技能（可多选，再次点击取消） */
 function applySkill(skill: WritingSkill) {
   skillStore.selectSkill(skill.id);
-  ElMessage.success(`已启用技能「${skill.name}」，在 AI 助手中生效`);
+  const isActive = skillStore.activeSkillIds.includes(skill.id);
+  ElMessage.success(isActive ? `已启用技能「${skill.name}」，在 AI 助手中生效` : `已取消技能「${skill.name}」`);
 }
 
 /** 从本地 zip 技能包导入（一个 zip = 一个或多个技能目录） */
