@@ -116,6 +116,30 @@
           <el-divider />
           <div class="mode-section">
             <h4>选择写作模式</h4>
+
+            <!-- 已选技能（@ 或技能市场选中的） -->
+            <div v-if="skillStore.activeSkills.length" class="mode-skills">
+              <p class="mode-subtitle">已选技能（来自技能市场 / @ 选择）</p>
+              <div class="mode-options">
+                <div
+                  v-for="skill in skillStore.activeSkills"
+                  :key="skill.id"
+                  class="mode-card mode-skill"
+                  :class="{ active: !refStore.writingMode }"
+                  @click="selectSkillMode"
+                >
+                  <span class="mode-emoji">
+                    <Icon v-if="skill.icon" :icon="skill.icon" :width="18" :height="18" />
+                    <span v-else>{{ skill.emoji }}</span>
+                  </span>
+                  <span class="mode-label">{{ skill.name }}</span>
+                  <span class="mode-desc">{{ skill.description }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 固定模式 -->
+            <p class="mode-subtitle">内置模式</p>
             <div class="mode-options">
               <div
                 v-for="(info, key) in WRITING_MODES"
@@ -145,7 +169,7 @@
         </div>
         <div class="footer-right">
           <el-button @click="handleCancel">
-            {{ step === 'analysis' && refStore.writingMode ? '开始写作' : '取消' }}
+            {{ step === 'analysis' && hasSelection ? '开始写作' : '取消' }}
           </el-button>
           <el-button
             v-if="step === 'preview'"
@@ -156,11 +180,11 @@
             开始分析
           </el-button>
           <el-button
-            v-if="step === 'analysis' && refStore.writingMode"
+            v-if="step === 'analysis' && hasSelection"
             type="primary"
             @click="handleConfirm"
           >
-            确认使用 {{ refStore.currentMode?.label }}
+            确认使用 {{ confirmLabel }}
           </el-button>
         </div>
       </div>
@@ -170,7 +194,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
+import { Icon } from "@iconify/vue";
 import { useReferenceStore } from "@/stores/reference";
+import { useSkillStore } from "@/skills/store";
 import { WRITING_MODES } from "@/types";
 import type { WritingMode } from "@/types";
 
@@ -180,7 +206,28 @@ const emit = defineEmits<{
 }>();
 
 const refStore = useReferenceStore();
+const skillStore = useSkillStore();
 const visible = defineModel<boolean>("visible");
+
+/** 是否有可用的写作方式（已选技能 或 固定模式） */
+const hasSelection = computed(
+  () => skillStore.activeSkills.length > 0 || !!refStore.writingMode
+);
+
+/** 确认按钮文案 */
+const confirmLabel = computed(() => {
+  if (skillStore.activeSkills.length > 0 && !refStore.writingMode) {
+    // 已选技能优先展示技能名
+    const names = skillStore.activeSkills.map((s) => s.name).join("、");
+    return names;
+  }
+  return refStore.currentMode?.label || "";
+});
+
+/** 选择技能模式：清空固定模式，让 handleSend 走技能分支 */
+function selectSkillMode() {
+  refStore.setWritingMode(null);
+}
 
 const step = ref<"select" | "preview" | "analysis">("select");
 
@@ -242,7 +289,7 @@ function handleConfirm() {
 }
 
 function handleCancel() {
-  if (step.value === "analysis" && refStore.writingMode) {
+  if (step.value === "analysis" && hasSelection.value) {
     // 直接确认
     handleConfirm();
   } else {
@@ -491,6 +538,16 @@ function formatTime(t?: string) {
   color: var(--text-2);
 }
 
+.mode-skills {
+  margin-bottom: 4px;
+}
+
+.mode-subtitle {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+
 .mode-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -517,6 +574,12 @@ function formatTime(t?: string) {
 .mode-card.active {
   border-color: var(--accent);
   background: var(--accent-soft);
+}
+
+.mode-skill .mode-emoji {
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
 }
 
 .mode-emoji {

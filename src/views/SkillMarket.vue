@@ -83,10 +83,14 @@
                 <Icon v-if="skill.icon" :icon="skill.icon" :width="26" :height="26" />
                 <span v-else>{{ skill.emoji }}</span>
               </div>
-              <div class="smp-card-name">{{ skill.name }}</div>
+              <el-tooltip :content="skill.name" placement="top" :show-after="200">
+                <div class="smp-card-name">{{ skill.name }}</div>
+              </el-tooltip>
               <el-tag size="small" type="primary" effect="plain" class="smp-source-tag">官方</el-tag>
             </div>
-            <div class="smp-card-desc">{{ skill.description }}</div>
+            <el-tooltip :content="skill.description" placement="top" :show-after="200" :show-arrow="true">
+              <div class="smp-card-desc">{{ skill.description }}</div>
+            </el-tooltip>
             <div class="smp-card-tags">
               <el-tag v-for="t in skill.tags.slice(0, 3)" :key="t" size="small" class="smp-tag">{{ t }}</el-tag>
             </div>
@@ -134,10 +138,14 @@
                 <Icon v-if="skill.icon" :icon="skill.icon" :width="26" :height="26" />
                 <span v-else>{{ skill.emoji }}</span>
               </div>
-              <div class="smp-card-name">{{ skill.name }}</div>
+              <el-tooltip :content="skill.name" placement="top" :show-after="200">
+                <div class="smp-card-name">{{ skill.name }}</div>
+              </el-tooltip>
               <el-tag size="small" type="warning" effect="plain" class="smp-source-tag">自定义</el-tag>
             </div>
-            <div class="smp-card-desc">{{ skill.description }}</div>
+            <el-tooltip :content="skill.description" placement="top" :show-after="200" :show-arrow="true">
+              <div class="smp-card-desc">{{ skill.description }}</div>
+            </el-tooltip>
             <div class="smp-card-meta">
               <span v-if="skill.author">作者：{{ skill.author }}</span>
               <span v-if="skill.version">v{{ skill.version }}</span>
@@ -512,6 +520,13 @@ async function openSkillsDir() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* el-tooltip 触发器包裹：继承 flex 伸缩，保证标题正常截断 */
+.smp-card-top :deep(.el-tooltip__trigger) {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
 }
 
 .smp-source-tag {

@@ -396,6 +396,14 @@ async function handleSend() {
       `【技能 ${i + 1}：${s.name}】\n${s.systemPrompt}`
     );
     systemPrompt = parts.join("\n\n");
+
+    // 仿写/借鉴类技能：注入参考小说上下文（分析摘要），让 AI 能读到参考作品特征
+    const needReference = skillStore.activeSkills.some(
+      (s) => s.id === "imitate-and-continue" || s.id === "imitate-style" || s.id === "reference-plot"
+    );
+    if (needReference && refStore.hasReference) {
+      systemPrompt = `${systemPrompt}\n\n${refStore.referenceContext}`;
+    }
   }
 
   // 拼接文风采样
