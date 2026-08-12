@@ -45,6 +45,91 @@
       </div>
     </div>
 
+    <!-- 输出目标小说选择条 -->
+    <div class="output-target">
+      <el-icon class="ot-icon"><Icon icon="lucide:target" /></el-icon>
+      <span class="ot-label">写入</span>
+      <el-select
+        v-model="outputProjectId"
+        placeholder="选小说…"
+        size="small"
+        clearable
+        filterable
+        class="ot-select"
+        @change="handleOutputProjectChange"
+      >
+        <el-option
+          v-for="p in projectStore.projects"
+          :key="p.id"
+          :label="p.name"
+          :value="p.id"
+        />
+      </el-select>
+      <el-select
+        v-model="outputChapterId"
+        placeholder="选章节/新建…"
+        size="small"
+        clearable
+        filterable
+        class="ot-select ot-chapter"
+        :disabled="!outputProjectId"
+        :no-data-text="outputProjectId ? '暂无章节，选择「+ 新建章节」' : '请先选择小说'"
+        @change="handleOutputChapterChange"
+      >
+        <el-option label="＋ 新建章节" value="__NEW__" class="ot-new-option">
+          <el-icon><Icon icon="lucide:file-plus" /></el-icon> 新建章节
+        </el-option>
+        <el-option
+          v-for="c in projectStore.chapters"
+          :key="c.file_name"
+          :label="c.title"
+          :value="c.file_name"
+        >
+          <span class="ot-chapter-opt">
+            <el-icon :size="12" style="vertical-align:-2px"><Icon icon="lucide:file-text" /></el-icon>
+            {{ c.title }}
+          </span>
+        </el-option>
+      </el-select>
+      <!-- 目标字数 -->
+      <el-tooltip content="设置每次生成的目标字数（AI 控制在附近），留空不限制" placement="bottom">
+        <div class="ot-wordcount">
+          <el-icon class="ot-wordcount-icon"><Icon icon="lucide:type" /></el-icon>
+          <el-input-number
+            v-model="targetWordCount"
+            :min="100"
+            :max="20000"
+            :step="500"
+            :controls="false"
+            size="small"
+            placeholder="字数"
+            class="ot-wordcount-input"
+          />
+          <span class="ot-wordcount-unit">字</span>
+        </div>
+      </el-tooltip>
+      <el-tooltip content="新建小说作为输出目标" placement="bottom">
+        <el-button
+          size="small"
+          text
+          circle
+          class="ot-new"
+          @click="emitCreateProject"
+        >
+          <el-icon><Icon icon="lucide:folder-plus" /></el-icon>
+        </el-button>
+      </el-tooltip>
+      <el-tag
+        v-if="outputProjectId && outputChapterId"
+        size="small"
+        type="success"
+        effect="plain"
+        class="ot-auto-tag"
+      >
+        {{ outputChapterId === '__NEW__' ? '将新建章节' : '追加到该章节' }}
+      </el-tag>
+    </div>
+
     <!-- 对话消息列表 -->
     <div class="chat-messages" ref="messagesRef">
       <div v-if="aiStore.messages.length === 0" class="chat-hint">
@@ -272,6 +357,7 @@ import { useWritingStore } from "@/stores/writing";
 import NovelImportDialog from "@/components/novel/NovelImportDialog.vue";
 import { useProjectStore } from "@/stores/project";
 import { useEditorStore } from "@/stores/editor";
+import { useOutlineStore } from "@/stores/outline";
 import { buildSmartContext } from "@/utils/nlp";
 import { normalizeChapterTitle } from "@/utils/chapterTitle";
 
@@ -288,6 +374,43 @@ const showOOCDialog = ref(false);
 const showOOCResult = ref("");
 const oocSummary = ref("");
 const messagesRef = ref<HTMLElement | null>(null);
+
+// ===== 输出目标小说 =====
+/** AI 生成内容要写入的目标小说 ID */
+const outputProjectId = ref<string>("");
+/** AI 生成内容要写入的目标章节（file_name；'__NEW__'=新建章节） */
+const outputChapterId = ref<string>("");
+/** 目标字数（AI 生成控制在附近）；null=不限制 */
+const targetWordCount = ref<number | undefined>(undefined);
+
+// 默认跟随当前打开的小说；打开小说时同步
+watch(
+  () => projectStore.currentProject?.id,
+  (id) => {
+    if (id) outputProjectId.value = id;
+  },
+  { immediate: true }
+);
+
+/** 选择输出目标后，打开该小说（同步上下文） */
+function handleOutputProjectChange(projectId: string | undefined) {
+  if (projectId) {
+    projectStore.openProject(projectId);
+    outputChapterId.value = "";
+    ElMessage.success(`AI 生成内容将保存到「${projectStore.projects.find((p) => p.id === projectId)?.name}」`);
+  }
+}
+
+/** 选择写入章节 */
+function handleOutputChapterChange(_chapterId: string | undefined) {
+  if (!outputChapterId.value) return;
+}
+
+/** 触发「新建小说」对话框（App.vue 监听 open-new-project 事件） */
+function emitCreateProject() {
+  window.dispatchEvent(new CustomEvent("open-new-project"));
+  // 新建成功后 outputProjectId 由 currentProject watch 自动同步
+}
 
 // ===== @提及技能 =====
 const mentionVisible = ref(false);
@@ -351,6 +474,23 @@ async function handleSend() {
   closeMention();
   const text = inputText.value;
   inputText.value = "";
+
+  // 仿写/续写类技能：必须有输出目标小说+章节，否则无法落盘
+  const needSaveSkill = skillStore.activeSkills.some(
+    (s) => s.id === "imitate-and-continue" || s.id === "imitate-style" || s.id === "reference-plot"
+  );
+  if (needSaveSkill) {
+    if (!outputProjectId.value) {
+      inputText.value = text; // 还原输入，避免丢失
+      ElMessage.warning("请先在 AI 助手顶部选择要写入的小说（或新建一本）");
+      return;
+    }
+    if (!outputChapterId.value) {
+      inputText.value = text;
+      ElMessage.warning("请选择要写入的章节（或选「＋ 新建章节」）");
+      return;
+    }
+  }
 
   // ===== 构建智能上下文（语义召回 + 动态拼接） =====
   let memoryContext = "";
@@ -428,9 +568,22 @@ async function handleSend() {
     aiStore.temperature = writingStore.suggestTemperature(editorStore.content.slice(-2000));
   }
 
+  // 目标字数：让 AI 控制生成篇幅在设定值附近（±10~15% 浮动）
+  if (targetWordCount.value && targetWordCount.value > 0) {
+    const n = targetWordCount.value;
+    const low = Math.round(n * 0.85);
+    const high = Math.round(n * 1.15);
+    systemPrompt = `${systemPrompt}\n\n【输出字数要求】\n请将本次输出控制在约 ${n} 字（正文汉字数），合理范围内为 ${low}~${high} 字。不要为了凑字数而注水，也不要过于简短；内容完整的前提下尽量接近目标字数。`;
+  }
+
   aiStore.systemPrompt = systemPrompt;
 
   await aiStore.sendMessage(text);
+
+  // ===== 仿写/续写类技能：生成后自动保存为新章节 =====
+  if (needSaveSkill && outputProjectId.value) {
+    await autoSaveToChapter();
+  }
 
   // ===== 人设校验（AI 生成后自动检测 OOC） =====
   if (writingStore.characterProfiles) {
@@ -456,12 +609,309 @@ async function handleSend() {
 const showChapterDialog = ref(false);
 const pendingChapterMsg = ref<any>(null);
 const chapterForm = reactive({ title: "", group: "" });
+
+/** 仿写/续写生成后：把最后一条 AI 回复写入目标章节，并在中间编辑器展示 */
+async function autoSaveToChapter() {
+  const projectId = outputProjectId.value;
+  if (!projectId) return;
+  const lastAssistant = [...aiStore.messages]
+    .reverse()
+    .find((m) => m.role === "assistant");
+  const aiContent = (lastAssistant?.content || "").trim();
+  if (!aiContent || aiContent.length < 50) return; // 过短不自动存，避免空/占位内容
+
+  try {
+    const target = outputChapterId.value;
+    const isNew = target === "__NEW__" || !target;
+
+    if (isNew) {
+      // ===== 新建章节：提取标题，写入并展示 =====
+      let title = normalizeChapterTitle(extractChapterTitle(aiContent));
+      if (!title) {
+        // 未识别到 # 标题 / 第X章：根据正文首句智能生成标题
+        title = smartTitleFromContent(aiContent);
+      }
+      if (!title) {
+        title = `${skillStore.activeSkills[0]?.name || "AI生成"}_${new Date().toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).replace(/[/:]/g, "")}`;
+      }
+      const existing = new Set(projectStore.chapters.map((c) => c.title));
+      let base = title;
+      let n = 2;
+      while (existing.has(title)) {
+        title = `${base}_${n}`;
+        n++;
+      }
+
+      await invoke("save_chapter", {
+        projectId,
+        chapterTitle: title,
+        group: "",
+        content: aiContent,
+      });
+      await projectStore.openProject(projectId);
+
+      // 在中间编辑器打开刚保存的章节
+      const chapter = projectStore.chapters.find((c) => c.title === title);
+      if (chapter) {
+        const c = await invoke<string>("read_chapter", {
+          projectId,
+          fileName: chapter.file_name,
+        });
+        await editorStore.openChapterWithMemory(chapter, c, projectId);
+      }
+      ElMessage.success(`已保存为章节「${title}」并在编辑器中打开`);
+    } else {
+      // ===== 追加到已有章节：读原文 + 追加 AI 内容 + 保存 =====
+      const chapter = projectStore.chapters.find((c) => c.file_name === target);
+      if (!chapter) {
+        ElMessage.warning("未找到目标章节，已改为新建");
+        outputChapterId.value = "__NEW__";
+        return autoSaveToChapter();
+      }
+
+      // 读取章节原文
+      const raw = await invoke<string>("read_chapter", {
+        projectId,
+        fileName: chapter.file_name,
+      });
+      // 追加前去掉 AI 内容开头的标题行（已有章节有自己的标题，避免正文出现第二个标题）
+      const bodyText = aiContent.replace(/^#{1,6}\s*[^\n]*\n+/m, "").trim();
+      const newContent = `${raw.replace(/\s+$/, "")}\n\n${bodyText}`;
+      await invoke("save_chapter", {
+        projectId,
+        chapterTitle: chapter.title,
+        group: chapter.group || "",
+        content: newContent,
+      });
+      await projectStore.openProject(projectId);
+
+      // 在中间编辑器打开该章节，展示追加后的完整内容
+      const refreshed = projectStore.chapters.find((c) => c.file_name === target) || chapter;
+      const c = await invoke<string>("read_chapter", {
+        projectId,
+        fileName: refreshed.file_name,
+      });
+      await editorStore.openChapterWithMemory(refreshed, c, projectId);
+      ElMessage.success(`已追加到章节「${chapter.title}」并在编辑器中展示`);
+    }
+
+    // ===== 自动回填小说元信息（大纲/世界观/小说信息/题材）=====
+    // 仅在目标小说尚无大纲时执行一次，避免覆盖用户已设置的内容
+    await autoFillNovelMeta(projectId);
+  } catch (e) {
+    console.error("自动保存章节失败:", e);
+    ElMessage.error("自动保存章节失败: " + e);
+  }
+}
+
+/**
+ * 根据刚生成的小说内容，自动生成并回填：小说信息（书名/题材/简介）、大纲、世界观。
+ * 在仿写/续写生成保存章节后调用（基于生成章节内容回填，覆盖/完善小说管理）。
+ */
+async function autoFillNovelMeta(projectId: string) {
+  // 汇总已有章节内容（取前几章作为 AI 生成元信息的依据）
+  const chapterTexts: string[] = [];
+  for (const ch of projectStore.chapters.slice(0, 3)) {
+    try {
+      const c = await invoke<string>("read_chapter", {
+        projectId,
+        fileName: ch.file_name,
+      });
+      chapterTexts.push(`【${ch.title}】\n${c.slice(0, 1500)}`);
+    } catch { /* 忽略读取失败 */ }
+  }
+  const sample = chapterTexts.join("\n\n").slice(0, 6000);
+  if (!sample) return;
+  const projectMeta = projectStore.projects.find((p) => p.id === projectId);
+
+  try {
+    const aiStore = useAIStore();
+    const response = await invoke<any>("call_ai", {
+      baseUrl: aiStore.resolvedBaseUrl,
+      apiKey: aiStore.resolvedApiKey,
+      model: aiStore.resolvedModelName,
+      messages: [
+        {
+          role: "system",
+          content: `你是一位小说创作元信息专家。请根据用户提供的小说章节内容，提炼出这部小说的完整元信息，严格按以下 JSON 结构输出，不要加任何额外说明：
+
+{
+  "book_name": "书名",
+  "genre": "题材（如：都市异能/玄幻/仙侠/科幻/悬疑）",
+  "description": "一句话简介（40字以内）",
+  "world": {
+    "content": "世界观核心设定描述（100-200字）",
+    "factions": [{"name":"势力名","description":"描述","members":["成员"]}],
+    "rules": ["规则1","规则2"],
+    "geography": "主要地理环境描述"
+  },
+  "outline": {
+    "title": "书名",
+    "volumes": [
+      {"title":"第一卷","description":"本卷概述","chapters":[{"title":"章节名","description":"该章剧情概述"}]}
+    ]
+  }
+}
+
+要求：
+- 基于已有章节内容合理提炼，不要凭空编造太多细节
+- genre 用常见网文题材分类
+- outline.volumes 至少包含 1 卷，每卷下 chapters 列出已有的章节并补充分卷走向`,
+        },
+        { role: "user", content: sample },
+      ],
+      temperature: 0.4,
+      maxTokens: 8192,
+    });
+
+    const result = JSON.parse(response.content);
+
+    // 1. 回填小说信息（书名/题材/简介）
+    const name = result.book_name || projectMeta?.name || "未命名小说";
+    await projectStore.updateProjectInfo(projectId, {
+      name,
+      genre: result.genre || "",
+      description: result.description || "",
+    });
+
+    // 2. 回填大纲
+    const outline = result.outline;
+    if (outline) {
+      const oStore = useOutlineStore();
+      oStore.initOutline(outline.title || name);
+      if (Array.isArray(outline.volumes) && outline.volumes.length > 0) {
+        // 清空默认卷，改用 AI 生成的分卷
+        oStore.outline!.children = [];
+        for (const vol of outline.volumes) {
+          oStore.addVolume(vol.title || `第${oStore.outline!.children.length + 1}卷`);
+          const volNode = oStore.outline!.children[oStore.outline!.children.length - 1];
+          volNode.description = vol.description || "";
+          if (Array.isArray(vol.chapters)) {
+            for (const ch of vol.chapters) {
+              oStore.addChapter(volNode.id, ch.title || "未命名章节");
+              const chNode = volNode.children[volNode.children.length - 1];
+              chNode.description = ch.description || "";
+            }
+          }
+        }
+      }
+      oStore.saveOutline(projectId);
+    }
+
+    // 3. 回填世界观
+    if (result.world) {
+      const world = {
+        content: result.world.content || "",
+        factions: Array.isArray(result.world.factions) ? result.world.factions : [],
+        rules: Array.isArray(result.world.rules) ? result.world.rules : [],
+        geography: result.world.geography || "",
+      };
+      await invoke("save_world", { projectId, worldSetting: world });
+    }
+
+    await projectStore.openProject(projectId);
+    ElMessage.success(`已自动回填小说信息：${name}（${result.genre || "题材未定"}）`);
+  } catch (e) {
+    console.error("自动回填小说元信息失败:", e);
+  }
+}
+
 // 当前项目已有的分组（供下拉选择）
 const existingGroups = computed(() => {
   const set = new Set<string>();
   for (const c of projectStore.chapters) if (c.group) set.add(c.group);
   return Array.from(set);
 });
+
+/** 从风格摘要关键词推断题材（AI 未返回 genre 时兜底） */
+function inferGenreFromSummary(summary: string): string {
+  if (!summary) return "";
+  const pairs: [string, string[]][] = [
+    ["玄幻", ["玄幻", "仙侠", "修仙", "修真", "斗气", "魔法", "大陆", "神明", "武者", "修炼", "异界", "剑"]],
+    ["都市异能", ["都市异能", "异能", "超能力", "觉醒"]],
+    ["都市", ["都市", "现代", "职场", "商业", "豪门", "总裁", "娱乐圈"]],
+    ["科幻", ["科幻", "星际", "未来", "机甲", "赛博", "太空", "科技"]],
+    ["悬疑", ["悬疑", "推理", "侦探", "惊悚", "破案", "犯罪"]],
+    ["言情", ["言情", "爱情", "恋爱", "虐恋", "甜宠", "感情"]],
+    ["历史", ["历史", "古代", "架空", "王朝", "穿越"]],
+    ["军事", ["军事", "战争", "兵王", "特种"]],
+    ["游戏", ["游戏", "电竞", "网游", "副本"]],
+    ["灵异", ["灵异", "鬼怪", "恐怖", "僵尸"]],
+  ];
+  for (const [genre, kws] of pairs) {
+    if (kws.some((k) => summary.includes(k))) return genre;
+  }
+  return "";
+}
+
+/**
+ * 基于参考小说分析结果，把风格/世界观/大纲/小说信息回填到目标小说管理。
+ * 在参考小说分析确认后调用（不需要再次调 AI，直接用 analysis 结果）。
+ */
+async function fillMetaFromReference(projectId: string) {
+  const analysis = refStore.analysis;
+  const refTitle = refStore.referenceNovel?.title || "";
+  if (!analysis || !projectId) return;
+
+  try {
+    const projectMeta = projectStore.projects.find((p) => p.id === projectId);
+    const baseName = projectMeta?.name || refTitle || "未命名小说";
+    // 题材：优先分析结果，其次从风格摘要推断
+    const genre = analysis.genre || inferGenreFromSummary(analysis.style_summary || "");
+
+    // 1. 回填小说信息（题材 + 风格摘要 → 简介）
+    await projectStore.updateProjectInfo(projectId, {
+      name: baseName,
+      genre,
+      description: analysis.style_summary || "",
+    });
+
+    // 2. 回填世界观（内容 = 风格摘要 + 叙事视角 + 节奏 + 对话风格）
+    const worldContent = [
+      `风格：${analysis.style_summary}`,
+      `叙事视角：${analysis.narrative_perspective}`,
+      `节奏：${analysis.pace_description}`,
+      `对话风格：${analysis.dialogue_style}`,
+      `写作特点：${analysis.writing_features.join("、")}`,
+    ].filter(Boolean).join("\n");
+    await invoke("save_world", {
+      projectId,
+      worldSetting: {
+        content: worldContent,
+        factions: [],
+        rules: [],
+        geography: "",
+      },
+    });
+
+    // 3. 回填大纲（卷 = 情节结构概述；章节 = 已有章节）
+    const oStore = useOutlineStore();
+    oStore.loadOutline(projectId);
+    oStore.initOutline(baseName);
+    // 清空默认卷，填一个「第一卷」承载情节结构
+    oStore.outline!.children = [];
+    oStore.addVolume("第一卷");
+    const vol = oStore.outline!.children[0];
+    vol.description = analysis.plot_structure || "（由参考小说分析生成）";
+    // 把已有章节挂到第一卷
+    for (const ch of projectStore.chapters) {
+      oStore.addChapter(vol.id, ch.title);
+      const chNode = vol.children[vol.children.length - 1];
+      chNode.description = "";
+    }
+    // 若没有章节，补一个占位章节展示结构
+    if (vol.children.length === 0) {
+      oStore.addChapter(vol.id, "第一章（待创作）");
+    }
+    oStore.saveOutline(projectId);
+
+    await projectStore.openProject(projectId);
+    ElMessage.success(`已将参考小说分析回填到「${baseName}」小说管理`);
+  } catch (e) {
+    console.error("基于参考分析回填失败:", e);
+    ElMessage.error("回填小说管理失败: " + e);
+  }
+}
 
 /** 打开「保存为章节」对话框 */
 async function saveAsChapter(msg: any) {
@@ -539,6 +989,33 @@ function extractChapterTitle(content: string): string {
   return m ? m[1].trim() : "";
 }
 
+/**
+ * 未识别到章节标题时，根据正文首句智能生成标题：
+ * - 提取首句关键内容（去掉引号/对话/冗长修饰）
+ * - 取前 12~18 字，保证完整、有吸引力
+ */
+function smartTitleFromContent(content: string): string {
+  const text = content
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/[#*`>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  // 去掉引号对话
+  const firstLine = text.split(/[。！？!?]/)[0]?.trim() || text;
+  // 去掉开头的人名冒号（对话体）
+  const cleaned = firstLine.replace(/^[「『“"“]/, "").trim();
+  if (!cleaned) return "";
+
+  // 取 12-18 字
+  const limit = cleaned.length <= 12 ? cleaned.length : Math.min(18, cleaned.length);
+  let title = cleaned.slice(0, limit);
+  // 若截断了，尝试在最后补"…"或保持完整词
+  if (title.length < cleaned.length && title.length >= 12) {
+    title = `${title}…`;
+  }
+  return title;
+}
+
 /** 把 AI 回复保存为角色（写入角色管理） */
 async function saveAsCharacter(msg: any) {
   const projectId = projectStore.currentProject?.id;
@@ -605,6 +1082,10 @@ function handleClear() {
 }
 
 function handleImportConfirm() {
+  // 导入确认后：把参考小说分析结果回填到目标小说管理
+  if (refStore.hasAnalysis && outputProjectId.value) {
+    fillMetaFromReference(outputProjectId.value);
+  }
   // 导入确认后自动进行对话
   if (refStore.hasAnalysis) {
     const novelTitle = refStore.referenceNovel?.title || "参考小说";
@@ -1022,6 +1503,102 @@ onBeforeUnmount(() => document.removeEventListener("mousedown", onDocClick));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ===== 输出目标小说选择条 ===== */
+.output-target {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.ot-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.ot-label {
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.ot-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.ot-select :deep(.el-select__wrapper) {
+  min-height: 24px;
+  padding: 0 8px;
+}
+
+.ot-chapter {
+  flex: 1.4;
+}
+
+.ot-new-option .el-icon {
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+
+.ot-chapter-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ot-chapter-opt .el-icon {
+  color: var(--text-3);
+}
+
+/* ===== 目标字数 ===== */
+.ot-wordcount {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ot-wordcount-icon {
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.ot-wordcount-input {
+  width: 72px;
+}
+
+.ot-wordcount-input :deep(.el-input__inner) {
+  min-height: 24px;
+  height: 24px;
+  font-size: 12px;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.ot-wordcount-input :deep(.el-input__wrapper) {
+  min-height: 24px;
+  box-shadow: 0 0 0 1px var(--border) inset;
+}
+
+.ot-wordcount-unit {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.ot-new {
+  flex-shrink: 0;
+}
+
+.ot-auto-tag {
+  flex-shrink: 0;
 }
 
 /* ===== 参考小说状态栏 ===== */

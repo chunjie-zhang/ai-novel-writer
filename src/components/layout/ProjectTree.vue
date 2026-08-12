@@ -388,6 +388,10 @@ async function handleDeleteChapter(proj: any, chapter: any) {
     });
     // 同步清理该章节的历史版本
     useVersionsStore().clearChapter(proj.id, chapter.file_name);
+    // 若删除的是当前正在编辑的章节，关闭编辑器并清空内容
+    if (editorStore.currentChapter?.file_name === chapter.file_name) {
+      editorStore.closeChapter();
+    }
     ElMessage.success(`已删除章节「${chapter.title}」`);
     await projectStore.openProject(proj.id);
   } catch (e) {
@@ -411,6 +415,13 @@ async function handleDeleteGroup(proj: any, group: string) {
     // 清理卷内所有章节的历史版本
     for (const c of getGroupChapters(proj.id, group)) {
       useVersionsStore().clearChapter(proj.id, c.file_name);
+    }
+    // 若当前编辑章节在卷内，关闭编辑器并清空内容
+    const deletedNames = new Set(
+      getGroupChapters(proj.id, group).map((c) => c.file_name)
+    );
+    if (editorStore.currentChapter && deletedNames.has(editorStore.currentChapter.file_name)) {
+      editorStore.closeChapter();
     }
     await invoke("delete_group", { projectId: proj.id, group });
     ElMessage.success(`已删除卷「${group}」`);

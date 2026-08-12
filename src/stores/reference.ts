@@ -126,6 +126,7 @@ export const useReferenceStore = defineStore("reference", () => {
 
 严格按照以下 JSON 结构返回，不要加任何额外说明：
 {
+  "genre": "题材（如：都市异能/玄幻/仙侠/科幻/悬疑/都市/历史）",
   "style_summary": "整体风格描述，30-50字",
   "writing_features": ["特点1", "特点2", "特点3", "特点4"],
   "narrative_perspective": "叙事视角分析",
@@ -146,6 +147,7 @@ export const useReferenceStore = defineStore("reference", () => {
 
       const result = JSON.parse(response.content);
       analysis.value = {
+        genre: result.genre || "",
         style_summary: result.style_summary || "",
         writing_features: result.writing_features || [],
         narrative_perspective: result.narrative_perspective || "",
@@ -159,6 +161,7 @@ export const useReferenceStore = defineStore("reference", () => {
       console.error("分析失败:", e);
       // 使用兜底分析
       analysis.value = {
+        genre: "",
         style_summary: "分析失败，请重试",
         writing_features: [],
         narrative_perspective: "",

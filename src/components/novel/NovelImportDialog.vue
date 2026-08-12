@@ -112,46 +112,84 @@
             </div>
           </div>
 
-          <!-- 选择写作模式 -->
+          <!-- 选择写作技能 -->
           <el-divider />
           <div class="mode-section">
-            <h4>选择写作模式</h4>
+            <h4>选择写作技能</h4>
+            <p class="mode-subtitle">从技能库中选择要使用的写作技能（可多选，选中后生成时生效）</p>
 
-            <!-- 已选技能（@ 或技能市场选中的） -->
-            <div v-if="skillStore.activeSkills.length" class="mode-skills">
-              <p class="mode-subtitle">已选技能（来自技能市场 / @ 选择）</p>
-              <div class="mode-options">
-                <div
-                  v-for="skill in skillStore.activeSkills"
-                  :key="skill.id"
-                  class="mode-card mode-skill"
-                  :class="{ active: !refStore.writingMode }"
-                  @click="selectSkillMode"
+            <!-- 搜索 + 分类筛选 -->
+            <div class="mode-filter">
+              <el-input
+                v-model="skillStore.searchQuery"
+                placeholder="搜索技能..."
+                size="small"
+                clearable
+                prefix-icon="Search"
+                class="mode-search"
+              />
+              <div class="mode-cats">
+                <el-tag
+                  :type="skillStore.activeCategory === null ? 'primary' : 'info'"
+                  size="small"
+                  effect="plain"
+                  class="mode-cat-tag"
+                  @click="skillStore.setCategory(null)"
+                >全部</el-tag>
+                <el-tag
+                  v-for="cat in skillStore.activeCategories"
+                  :key="cat.key"
+                  :type="skillStore.activeCategory === cat.key ? 'primary' : 'info'"
+                  size="small"
+                  effect="plain"
+                  class="mode-cat-tag"
+                  @click="skillStore.setCategory(cat.key)"
                 >
-                  <span class="mode-emoji">
-                    <Icon v-if="skill.icon" :icon="skill.icon" :width="18" :height="18" />
-                    <span v-else>{{ skill.emoji }}</span>
-                  </span>
-                  <span class="mode-label">{{ skill.name }}</span>
-                  <span class="mode-desc">{{ skill.description }}</span>
-                </div>
+                  <el-icon :size="13" style="vertical-align:-2px"><Icon :icon="cat.icon" /></el-icon>
+                  {{ cat.label }}
+                </el-tag>
               </div>
             </div>
 
-            <!-- 固定模式 -->
-            <p class="mode-subtitle">内置模式</p>
-            <div class="mode-options">
+            <!-- 技能库（可多选） -->
+            <div class="mode-skills">
               <div
-                v-for="(info, key) in WRITING_MODES"
-                :key="key"
-                class="mode-card"
-                :class="{ active: refStore.writingMode === key }"
-                @click="refStore.setWritingMode(key as WritingMode)"
+                v-for="skill in skillStore.filteredSkills"
+                :key="skill.id"
+                class="mode-card mode-skill"
+                :class="{ active: skillStore.activeSkillIds.includes(skill.id) }"
+                @click="toggleSkillSelect(skill)"
               >
-                <span class="mode-emoji">{{ info.emoji }}</span>
-                <span class="mode-label">{{ info.label }}</span>
-                <span class="mode-desc">{{ info.desc }}</span>
+                <span class="mode-emoji">
+                  <Icon v-if="skill.icon" :icon="skill.icon" :width="18" :height="18" />
+                  <span v-else>{{ skill.emoji }}</span>
+                </span>
+                <span class="mode-label">{{ skill.name }}</span>
+                <span class="mode-desc">{{ skill.description }}</span>
+                <span class="mode-check" v-if="skillStore.activeSkillIds.includes(skill.id)">
+                  <Icon icon="lucide:check" :width="14" :height="14" />
+                </span>
               </div>
+              <div v-if="skillStore.filteredSkills.length === 0" class="mode-empty">
+                <el-empty description="没有匹配的技能" :image-size="50" />
+              </div>
+            </div>
+
+            <!-- 已选技能汇总 -->
+            <div v-if="skillStore.activeSkills.length" class="mode-selected">
+              <span class="mode-selected-label">已选：</span>
+              <el-tag
+                v-for="s in skillStore.activeSkills"
+                :key="s.id"
+                size="small"
+                type="success"
+                effect="light"
+                closable
+                class="mode-selected-tag"
+                @close="skillStore.removeActiveSkill(s.id)"
+              >
+                {{ s.name }}
+              </el-tag>
             </div>
           </div>
         </div>
@@ -164,7 +202,7 @@
           <el-steps :active="stepIndex" simple size="small">
             <el-step title="选择文件" />
             <el-step title="选择章节" />
-            <el-step title="分析与模式" />
+            <el-step title="分析与技能" />
           </el-steps>
         </div>
         <div class="footer-right">
@@ -197,8 +235,6 @@ import { ref, computed, watch } from "vue";
 import { Icon } from "@iconify/vue";
 import { useReferenceStore } from "@/stores/reference";
 import { useSkillStore } from "@/skills/store";
-import { WRITING_MODES } from "@/types";
-import type { WritingMode } from "@/types";
 
 const emit = defineEmits<{
   confirm: [];
@@ -209,24 +245,17 @@ const refStore = useReferenceStore();
 const skillStore = useSkillStore();
 const visible = defineModel<boolean>("visible");
 
-/** 是否有可用的写作方式（已选技能 或 固定模式） */
-const hasSelection = computed(
-  () => skillStore.activeSkills.length > 0 || !!refStore.writingMode
+/** 是否有已选技能 */
+const hasSelection = computed(() => skillStore.activeSkills.length > 0);
+
+/** 确认按钮文案：已选技能名 */
+const confirmLabel = computed(() =>
+  skillStore.activeSkills.map((s) => s.name).join("、")
 );
 
-/** 确认按钮文案 */
-const confirmLabel = computed(() => {
-  if (skillStore.activeSkills.length > 0 && !refStore.writingMode) {
-    // 已选技能优先展示技能名
-    const names = skillStore.activeSkills.map((s) => s.name).join("、");
-    return names;
-  }
-  return refStore.currentMode?.label || "";
-});
-
-/** 选择技能模式：清空固定模式，让 handleSend 走技能分支 */
-function selectSkillMode() {
-  refStore.setWritingMode(null);
+/** 切换技能选中状态（追加/取消） */
+function toggleSkillSelect(skill: any) {
+  skillStore.selectSkill(skill.id);
 }
 
 const step = ref<"select" | "preview" | "analysis">("select");
@@ -240,6 +269,10 @@ const stepIndex = computed(() => {
 watch(visible, (val) => {
   if (!val) {
     setTimeout(() => { step.value = "select"; }, 300);
+  } else {
+    // 打开时重置搜索与分类筛选
+    skillStore.setSearch("");
+    skillStore.setCategory(null);
   }
 });
 
@@ -534,12 +567,8 @@ function formatTime(t?: string) {
 
 .mode-section h4 {
   font-size: 13px;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   color: var(--text-2);
-}
-
-.mode-skills {
-  margin-bottom: 4px;
 }
 
 .mode-subtitle {
@@ -548,17 +577,44 @@ function formatTime(t?: string) {
   margin-bottom: 8px;
 }
 
-.mode-options {
+/* 搜索 + 分类 */
+.mode-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.mode-search {
+  width: 100%;
+}
+
+.mode-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.mode-cat-tag {
+  cursor: pointer;
+}
+
+/* 技能库网格（可滚动） */
+.mode-skills {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 2px;
 }
 
 .mode-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
   cursor: pointer;
@@ -583,7 +639,7 @@ function formatTime(t?: string) {
 }
 
 .mode-emoji {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .mode-label {
@@ -596,6 +652,45 @@ function formatTime(t?: string) {
   font-size: 11px;
   color: var(--text-2);
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mode-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: var(--accent);
+  display: inline-flex;
+}
+
+.mode-empty {
+  grid-column: 1 / -1;
+  padding: 12px 0;
+}
+
+/* 已选技能汇总条 */
+.mode-selected {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.mode-selected-label {
+  font-size: 12px;
+  color: var(--text-2);
+  flex-shrink: 0;
+}
+
+.mode-selected-tag {
+  max-width: 100%;
 }
 
 .dialog-footer {

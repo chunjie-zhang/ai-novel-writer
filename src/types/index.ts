@@ -168,6 +168,8 @@ export interface ReferenceChapter {
 
 /** AI 小说分析结果 */
 export interface NovelAnalysis {
+  /** 题材（如：都市异能/玄幻/仙侠/科幻/悬疑） */
+  genre: string;
   /** 整体风格描述 */
   style_summary: string;
   /** 写作特点 */

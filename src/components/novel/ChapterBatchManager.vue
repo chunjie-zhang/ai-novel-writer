@@ -77,6 +77,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { invoke } from "@tauri-apps/api/core";
 import type { ChapterInfo } from "@/types";
 import { useVersionsStore } from "@/stores/versions";
+import { useEditorStore } from "@/stores/editor";
 
 const visible = defineModel<boolean>("visible");
 
@@ -147,6 +148,14 @@ async function handleBatchDelete() {
       });
       useVersionsStore().clearChapter(props.projectId, id);
     } catch (e) { console.error("删除章节失败:", e); }
+  }
+  // 若当前编辑章节被删除，关闭编辑器并清空内容
+  const editorStore = useEditorStore();
+  if (
+    editorStore.currentChapter &&
+    selectedIds.value.includes(editorStore.currentChapter.file_name)
+  ) {
+    editorStore.closeChapter();
   }
   selectedIds.value = [];
   ElMessage.success("删除完成");
