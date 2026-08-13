@@ -604,12 +604,18 @@ async function handleSend() {
     }
   }
 
-  await aiStore.sendMessage(text);
+  // ===== 写章节场景（仿写/续写技能 + 已选输出小说）：右侧只显示"生成中"提示，正文只在中间展示 =====
+  const isWritingChapter = needSaveSkill && !!outputProjectId.value;
+  if (isWritingChapter) {
+    // 右侧聊天放一个"生成中"占位，正文不写进聊天
+    aiStore.addMessage("assistant", "✍️ 正在创作章节…");
+  }
+  const aiResult = await aiStore.sendMessage(text, { writeToChat: !isWritingChapter });
   aiStore.maxTokens = savedMaxTokens; // 恢复原上限
 
   // ===== 仿写/续写类技能：生成后自动保存为新章节 =====
-  if (needSaveSkill && outputProjectId.value) {
-    await autoSaveToChapter();
+  if (isWritingChapter) {
+    await autoSaveToChapter(aiResult);
   }
 
   // ===== 人设校验（后台静默执行，不打断主流程、不污染聊天记录） =====
@@ -871,13 +877,17 @@ async function saveMultipleChapters(
 }
 
 /** 仿写/续写生成后：把最后一条 AI 回复写入目标章节，并在中间编辑器展示 */
-async function autoSaveToChapter() {
+async function autoSaveToChapter(contentOverride?: string) {
   const projectId = outputProjectId.value;
   if (!projectId) return;
-  const lastAssistant = [...aiStore.messages]
-    .reverse()
-    .find((m) => m.role === "assistant");
-  const aiContent = (lastAssistant?.content || "").trim();
+  // 优先用传入的内容（写章节场景正文不进聊天）；否则从最后一条 assistant 取
+  let aiContent = (contentOverride || "").trim();
+  if (!aiContent) {
+    const lastAssistant = [...aiStore.messages]
+      .reverse()
+      .find((m) => m.role === "assistant");
+    aiContent = (lastAssistant?.content || "").trim();
+  }
   if (!aiContent || aiContent.length < 50) return; // 过短不自动存，避免空/占位内容
 
   try {

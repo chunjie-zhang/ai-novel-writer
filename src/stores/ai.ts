@@ -248,7 +248,9 @@ export const useAIStore = defineStore("ai", () => {
     persistChat();
   }
 
-  async function sendMessage(content: string): Promise<string> {
+  async function sendMessage(content: string, opts: { writeToChat?: boolean } = {}): Promise<string> {
+    // writeToChat=false：正文只进中间预览（streamingDraft），不写进聊天（用于生成小说章节，右侧只显示提示）
+    const writeToChat = opts.writeToChat !== false;
     addMessage("user", content);
 
     isGenerating.value = true;
@@ -272,9 +274,12 @@ export const useAIStore = defineStore("ai", () => {
         { role: "user", content },
       ];
 
-      // ===== 流式输出：预置空 assistant 消息，逐块填充 =====
-      messages.value.push({ role: "assistant", content: "" });
-      const assistantIdx = messages.value.length - 1;
+      // ===== 流式输出：writeToChat 时预置空 assistant 消息逐块填充；否则仅更新中间预览 =====
+      let assistantIdx = -1;
+      if (writeToChat) {
+        messages.value.push({ role: "assistant", content: "" });
+        assistantIdx = messages.value.length - 1;
+      }
 
       const channel = new Channel<StreamChunk>();
       let full = "";
@@ -288,9 +293,10 @@ export const useAIStore = defineStore("ai", () => {
           resolveDone(full);
         } else {
           full += msg.delta;
-          // 实时同步到流式草稿（中间编辑器预览）与聊天消息
+          // 实时同步到流式草稿（中间编辑器预览）
           streamingDraft.value = full;
-          if (messages.value[assistantIdx]) {
+          // writeToChat 时才同步到聊天消息
+          if (writeToChat && assistantIdx >= 0 && messages.value[assistantIdx]) {
             messages.value[assistantIdx].content = full;
           }
         }
