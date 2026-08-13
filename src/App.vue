@@ -520,4 +520,27 @@ onBeforeUnmount(() => {
   overflow-y: auto;
   flex-shrink: 0;
 }
+
+/* 设置弹窗：弹窗整体固定高度，仅内容区滚动（避免整个弹窗跟着内容上下滑） */
+:global(.settings-dialog) {
+  display: flex;
+  flex-direction: column;
+  max-height: 82vh;
+  margin: 7vh auto 7vh;
+}
+:global(.settings-dialog .el-dialog__header) {
+  flex-shrink: 0;
+}
+:global(.settings-dialog .el-dialog__body) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 0;
+}
+:global(.settings-dialog .el-tabs__nav-wrap) {
+  position: sticky;
+  top: 0;
+  background: var(--el-dialog-bg-color, var(--el-bg-color));
+  z-index: 1;
+}
 </style>
