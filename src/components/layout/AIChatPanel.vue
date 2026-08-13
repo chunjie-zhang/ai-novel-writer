@@ -274,11 +274,14 @@
         </div>
         <el-button
           type="primary"
-          :loading="aiStore.isGenerating"
-          :disabled="!inputText.trim()"
-          @click="handleSend"
+          :disabled="!aiStore.isGenerating && !inputText.trim()"
+          @click="aiStore.isGenerating ? aiStore.stopGeneration() : handleSend()"
         >
-          发送
+          <!-- 生成中显示自旋图标 + 「停止」；loading 属性会禁用点击，故用自定义图标 -->
+          <el-icon v-if="aiStore.isGenerating" class="is-loading" style="margin-right: 4px;">
+            <Icon icon="lucide:loader-2" />
+          </el-icon>
+          <span>{{ aiStore.isGenerating ? "停止" : "发送" }}</span>
         </el-button>
       </div>
     </div>

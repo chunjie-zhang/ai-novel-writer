@@ -2,9 +2,19 @@ use crate::models::*;
 use crate::commands::config;
 use reqwest::Client;
 use serde_json::json;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use futures_util::StreamExt;
 use tauri::ipc::Channel;
+
+/// 全局取消标志：call_ai_stream 运行时检查，前端调用 cancel_ai_stream 置为 true 以中断输出
+static AI_CANCEL: AtomicBool = AtomicBool::new(false);
+
+/// 取消当前流式生成（前端点击「停止」时调用）
+#[tauri::command]
+pub fn cancel_ai_stream() {
+    AI_CANCEL.store(true, Ordering::SeqCst);
+}
 
 /// 流式输出块
 #[derive(Clone, serde::Serialize)]
@@ -25,6 +35,9 @@ pub async fn call_ai_stream(
     max_tokens: u32,
     on_event: Channel<StreamChunk>,
 ) -> Result<(), String> {
+    // 重置取消标志
+    AI_CANCEL.store(false, Ordering::SeqCst);
+
     let client = Client::builder()
         .timeout(Duration::from_secs(300))
         .build()
@@ -62,6 +75,10 @@ pub async fn call_ai_stream(
     let mut stream = response.bytes_stream();
     let mut buffer = String::new();
     while let Some(chunk) = stream.next().await {
+        // 被取消：立即中断输出（前端已自行 resolve，此处不再发 done）
+        if AI_CANCEL.load(Ordering::SeqCst) {
+            return Ok(());
+        }
         let bytes = chunk.map_err(|e| format!("读取流失败: {}", e))?;
         buffer.push_str(&String::from_utf8_lossy(&bytes));
 

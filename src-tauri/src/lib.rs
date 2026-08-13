@@ -22,6 +22,7 @@ pub fn run() {
             commands::delete_group,
             commands::call_ai,
             commands::call_ai_stream,
+            commands::cancel_ai_stream,
             commands::save_memory,
             commands::list_memories,
             commands::import_novel_file,

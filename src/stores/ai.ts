@@ -7,6 +7,10 @@ import { useTemplateStore } from "@/stores/templates";
 
 const CONFIG_KEY = "novel-ai-config";
 
+/** 当前挂起的流式 completion 的 resolve（供 stopGeneration 手动结束） */
+let activeResolve: ((v: string) => void) | null = null;
+
+
 /** 流式输出块（与 Rust 端 StreamChunk 对应） */
 interface StreamChunk {
   delta: string;
@@ -287,6 +291,7 @@ export const useAIStore = defineStore("ai", () => {
       const completion = new Promise<string>((res) => {
         resolveDone = res;
       });
+      activeResolve = resolveDone; // 记录，供 stopGeneration 手动结束
 
       channel.onmessage = (msg) => {
         if (msg.done) {
@@ -319,7 +324,19 @@ export const useAIStore = defineStore("ai", () => {
       isGenerating.value = false;
       // 生成结束后清空草稿（此时已保存/展示到章节，避免残留）
       streamingDraft.value = "";
+      activeResolve = null;
     }
+  }
+
+  /** 停止当前生成（点击「停止」按钮）：通知 Rust 中断流式，并手动结束挂起的 completion */
+  function stopGeneration() {
+    invoke("cancel_ai_stream").catch(() => {});
+    if (activeResolve) {
+      // 以当前已生成内容结束（正文已实时同步到 streamingDraft / 聊天）
+      activeResolve(streamingDraft.value || "");
+      activeResolve = null;
+    }
+    isGenerating.value = false;
   }
 
   async function saveMemory(
@@ -397,6 +414,7 @@ export const useAIStore = defineStore("ai", () => {
     replaceLastAssistant,
     loadChatHistory,
     sendMessage,
+    stopGeneration,
     saveMemory,
     listMemories,
     testConnection,
