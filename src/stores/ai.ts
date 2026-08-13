@@ -21,6 +21,8 @@ interface PersistedAIConfig {
   customModelName: string;
   temperature: number;
   maxTokens: number;
+  /** 目标字数（每次生成控制在此附近；留空不限制） */
+  targetWordCount?: number;
 }
 
 function loadConfig(): PersistedAIConfig | null {
@@ -42,6 +44,8 @@ export const useAIStore = defineStore("ai", () => {
   // 状态
   const messages = ref<ChatMessage[]>([]);
   const isGenerating = ref(false);
+  /** 当前流式输出的草稿（供中间编辑器实时预览打字机效果） */
+  const streamingDraft = ref("");
   // 当前会话属于哪个项目（用于按小说保存/恢复聊天历史）
   const chatProjectId = ref<string | null>(null);
 
@@ -79,6 +83,8 @@ export const useAIStore = defineStore("ai", () => {
   const customModelName = ref(saved?.customModelName ?? "");
   const temperature = ref(saved?.temperature ?? 0.8);
   const maxTokens = ref(saved?.maxTokens ?? 4096);
+  /** 目标字数（全局配置，设置一次后持久生效；留空不限制） */
+  const targetWordCount = ref<number | undefined>(saved?.targetWordCount ?? undefined);
 
   // ===== 计算属性：根据当前模式解析实际模型参数 =====
   const resolvedApiKey = computed(() => {
@@ -121,7 +127,7 @@ export const useAIStore = defineStore("ai", () => {
   // 本地 localStorage 立即保存；磁盘防抖保存（避免频繁 IO）
   let diskSaveTimer: ReturnType<typeof setTimeout> | null = null;
   watch(
-    [modelProvider, builtinVariant, customApiKey, customBaseUrl, customModelName, temperature, maxTokens],
+    [modelProvider, builtinVariant, customApiKey, customBaseUrl, customModelName, temperature, maxTokens, targetWordCount],
     () => {
       persistConfigLocal();
       scheduleDiskSave();
@@ -144,6 +150,7 @@ export const useAIStore = defineStore("ai", () => {
       customModelName: customModelName.value,
       temperature: temperature.value,
       maxTokens: maxTokens.value,
+      targetWordCount: targetWordCount.value,
     };
   }
 
@@ -180,6 +187,7 @@ export const useAIStore = defineStore("ai", () => {
     if (config.customModelName !== undefined) customModelName.value = config.customModelName;
     if (config.temperature !== undefined) temperature.value = config.temperature;
     if (config.maxTokens !== undefined) maxTokens.value = config.maxTokens;
+    if (config.targetWordCount !== undefined) targetWordCount.value = config.targetWordCount;
     // 应用后同步到 localStorage，避免下次又读到旧的
     persistConfigLocal();
   }
@@ -229,10 +237,22 @@ export const useAIStore = defineStore("ai", () => {
     persistChat();
   }
 
+  /** 将最后一条 AI 回复替换为摘要（用于已保存为章节后避免右侧聊天过长） */
+  function replaceLastAssistant(summary: string) {
+    for (let i = messages.value.length - 1; i >= 0; i--) {
+      if (messages.value[i].role === "assistant") {
+        messages.value[i].content = summary;
+        break;
+      }
+    }
+    persistChat();
+  }
+
   async function sendMessage(content: string): Promise<string> {
     addMessage("user", content);
 
     isGenerating.value = true;
+    streamingDraft.value = "";
     try {
       // 注入题材风格模板（若已选择），让 AI 输出贴合所选题材的文风
       let finalSystemPrompt = systemPrompt.value;
@@ -268,6 +288,8 @@ export const useAIStore = defineStore("ai", () => {
           resolveDone(full);
         } else {
           full += msg.delta;
+          // 实时同步到流式草稿（中间编辑器预览）与聊天消息
+          streamingDraft.value = full;
           if (messages.value[assistantIdx]) {
             messages.value[assistantIdx].content = full;
           }
@@ -289,6 +311,8 @@ export const useAIStore = defineStore("ai", () => {
       return result;
     } finally {
       isGenerating.value = false;
+      // 生成结束后清空草稿（此时已保存/展示到章节，避免残留）
+      streamingDraft.value = "";
     }
   }
 
@@ -323,6 +347,7 @@ export const useAIStore = defineStore("ai", () => {
   return {
     messages,
     isGenerating,
+    streamingDraft,
     chatProjectId,
     modelProvider,
     builtinVariant,
@@ -331,6 +356,7 @@ export const useAIStore = defineStore("ai", () => {
     customModelName,
     temperature,
     maxTokens,
+    targetWordCount,
     // 解析后的只读参数（用于实际调用）
     resolvedApiKey,
     resolvedBaseUrl,
@@ -343,6 +369,7 @@ export const useAIStore = defineStore("ai", () => {
     setModelConfig,
     addMessage,
     clearMessages,
+    replaceLastAssistant,
     loadChatHistory,
     sendMessage,
     saveMemory,

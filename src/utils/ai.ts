@@ -23,6 +23,66 @@ export async function callAI(
 }
 
 /**
+ * 从 AI 回复文本中健壮地提取 JSON 对象/数组。
+ * 兼容模型常见的几种"不干净"输出：
+ * - ```json ... ``` 代码块包裹
+ * - 前后带有说明文字（markdown 标题、额外句子）
+ * - 前后空白 / BOM
+ * 找不到有效 JSON 时抛错，由调用方决定重试。
+ */
+export function extractJsonContent(text: string): any {
+  if (!text) throw new Error("AI 返回内容为空");
+  let raw = text.trim().replace(/^\uFEFF/, "");
+
+  // 1. 优先尝试直接解析
+  try {
+    return JSON.parse(raw);
+  } catch { /* 继续尝试清洗 */ }
+
+  // 2. 去掉 ```json / ``` 代码块标记
+  raw = raw
+    .replace(/```(?:json)?/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  // 3. 提取第一个 { 到最后一个 }（对象）；若以 [ 开头则提取 [ 到最后一个 ]
+  const braceStart = raw.indexOf("{");
+  const braceEnd = raw.lastIndexOf("}");
+  const bracketStart = raw.indexOf("[");
+  const bracketEnd = raw.lastIndexOf("]");
+
+  const tryParse = (s: string) => {
+    try {
+      const v = JSON.parse(s);
+      if (v !== null && (typeof v === "object" || Array.isArray(v))) return v;
+    } catch { /* 继续 */ }
+    return undefined;
+  };
+
+  if (braceStart >= 0 && braceEnd > braceStart) {
+    const obj = tryParse(raw.slice(braceStart, braceEnd + 1));
+    if (obj !== undefined) return obj;
+  }
+  if (bracketStart >= 0 && bracketEnd > bracketStart) {
+    const arr = tryParse(raw.slice(bracketStart, bracketEnd + 1));
+    if (arr !== undefined) return arr;
+  }
+
+  // 4. 逐行剔除开头非 JSON 行后重试（覆盖"结论文字在 JSON 前"的情况）
+  const lines = raw.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const candidate = lines.slice(i).join("\n").trim();
+    if (!candidate) continue;
+    try {
+      const v = JSON.parse(candidate);
+      if (v !== null && (typeof v === "object" || Array.isArray(v))) return v;
+    } catch { /* 继续 */ }
+  }
+
+  throw new Error("AI 返回内容中未找到有效 JSON");
+}
+
+/**
  * 构建 AI 记忆上下文
  * 将世界观、角色、最近章节摘要拼接成 system prompt
  */

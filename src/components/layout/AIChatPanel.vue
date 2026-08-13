@@ -91,12 +91,12 @@
           </span>
         </el-option>
       </el-select>
-      <!-- 目标字数 -->
-      <el-tooltip content="设置每次生成的目标字数（AI 控制在附近），留空不限制" placement="bottom">
+      <!-- 目标字数（全局配置，设置一次后持久生效） -->
+      <el-tooltip content="设置每次生成的目标字数（全局生效，AI 控制在附近），留空不限制" placement="bottom">
         <div class="ot-wordcount">
           <el-icon class="ot-wordcount-icon"><Icon icon="lucide:type" /></el-icon>
           <el-input-number
-            v-model="targetWordCount"
+            v-model="aiStore.targetWordCount"
             :min="100"
             :max="20000"
             :step="500"
@@ -358,7 +358,9 @@ import NovelImportDialog from "@/components/novel/NovelImportDialog.vue";
 import { useProjectStore } from "@/stores/project";
 import { useEditorStore } from "@/stores/editor";
 import { useOutlineStore } from "@/stores/outline";
+import { useTemplateStore } from "@/stores/templates";
 import { buildSmartContext } from "@/utils/nlp";
+import { extractJsonContent } from "@/utils/ai";
 import { normalizeChapterTitle } from "@/utils/chapterTitle";
 
 const aiStore = useAIStore();
@@ -380,8 +382,7 @@ const messagesRef = ref<HTMLElement | null>(null);
 const outputProjectId = ref<string>("");
 /** AI 生成内容要写入的目标章节（file_name；'__NEW__'=新建章节） */
 const outputChapterId = ref<string>("");
-/** 目标字数（AI 生成控制在附近）；null=不限制 */
-const targetWordCount = ref<number | undefined>(undefined);
+// 目标字数改为 aiStore.targetWordCount（全局配置，设置一次后持久生效）
 
 // 默认跟随当前打开的小说；打开小说时同步
 watch(
@@ -569,16 +570,22 @@ async function handleSend() {
   }
 
   // 目标字数：让 AI 控制生成篇幅在设定值附近（±10~15% 浮动）
-  if (targetWordCount.value && targetWordCount.value > 0) {
-    const n = targetWordCount.value;
+  // 记住生成前 maxTokens，生成后恢复，避免字数限制污染后续会话
+  const savedMaxTokens = aiStore.maxTokens;
+  if (aiStore.targetWordCount && aiStore.targetWordCount > 0) {
+    const n = aiStore.targetWordCount;
     const low = Math.round(n * 0.85);
     const high = Math.round(n * 1.15);
-    systemPrompt = `${systemPrompt}\n\n【输出字数要求】\n请将本次输出控制在约 ${n} 字（正文汉字数），合理范围内为 ${low}~${high} 字。不要为了凑字数而注水，也不要过于简短；内容完整的前提下尽量接近目标字数。`;
+    systemPrompt = `${systemPrompt}\n\n【输出字数要求（必须遵守）】\n本次输出正文汉字数必须控制在约 ${n} 字，合理范围 ${low}~${high} 字。\n要求：\n- 达到目标字数后立即自然收尾结束，不要继续展开新情节或啰嗦重复；\n- 若预测会超出上限，应压缩描写、加快节奏，确保在范围内完成；\n- 字数只统计正文汉字，不含标题、Markdown 符号、标点与空白。\n- 不要为了凑字数注水，也不要为了求短而残缺。`;
+    // 物理限制输出长度：目标字数 × 1.8 作为 token 上限（中文约 1 字 ≈ 1.3~1.5 token），
+    // 与既有上限取更小值，确保 AI 无法生成远超目标的内容
+    aiStore.maxTokens = Math.min(aiStore.maxTokens, Math.ceil(n * 1.8));
   }
 
   aiStore.systemPrompt = systemPrompt;
 
   await aiStore.sendMessage(text);
+  aiStore.maxTokens = savedMaxTokens; // 恢复原上限
 
   // ===== 仿写/续写类技能：生成后自动保存为新章节 =====
   if (needSaveSkill && outputProjectId.value) {
@@ -659,6 +666,8 @@ async function autoSaveToChapter() {
         });
         await editorStore.openChapterWithMemory(chapter, c, projectId);
       }
+      // 右侧聊天不再展示完整章节（太长），替换为简短提示
+      aiStore.replaceLastAssistant(`📖 已保存为章节「${title}」，全文已在中间编辑器展示，此处不再重复`);
       ElMessage.success(`已保存为章节「${title}」并在编辑器中打开`);
     } else {
       // ===== 追加到已有章节：读原文 + 追加 AI 内容 + 保存 =====
@@ -692,6 +701,8 @@ async function autoSaveToChapter() {
         fileName: refreshed.file_name,
       });
       await editorStore.openChapterWithMemory(refreshed, c, projectId);
+      // 右侧聊天不再展示完整章节（太长），替换为简短提示
+      aiStore.replaceLastAssistant(`📖 已追加到章节「${chapter.title}」，全文已在中间编辑器展示，此处不再重复`);
       ElMessage.success(`已追加到章节「${chapter.title}」并在编辑器中展示`);
     }
 
@@ -704,8 +715,86 @@ async function autoSaveToChapter() {
   }
 }
 
+/** 常见题材关键词 → 题材模板 id（精确命中优先） */
+const GENRE_TO_TEMPLATE: Record<string, string> = {
+  "玄幻": "xuanhuan",
+  "仙侠": "xuanhuan",
+  "修仙": "xuanhuan",
+  "修真": "xuanhuan",
+  "奇幻": "qihuan",
+  "都市": "dushi",
+  "都市异能": "dushi",
+  "现代": "dushi",
+  "言情": "yanqing",
+  "恋爱": "yanqing",
+  "甜宠": "yanqing",
+  "科幻": "kehuan",
+  "星际": "kehuan",
+  "赛博": "kehuan",
+  "悬疑": "xuanyi",
+  "推理": "xuanyi",
+  "冒险": "qihuan",
+  "历史": "lishi",
+  "穿越": "lishi",
+  "恐怖": "kongbu",
+  "灵异": "kongbu",
+  "惊悚": "kongbu",
+};
+
 /**
- * 根据刚生成的小说内容，自动生成并回填：小说信息（书名/题材/简介）、大纲、世界观。
+ * 根据题材关键词匹配内置题材模板（templateStore.allTemplates），返回模板 id 或 null。
+ * 优先精确题材映射；未命中再用模板名/标签/描述/风格倾向模糊匹配，得分最高者胜出。
+ */
+function matchGenreTemplate(genre: string, extraKeywords: string = ""): string | null {
+  const tStore = useTemplateStore();
+  const text = `${genre} ${extraKeywords}`.toLowerCase();
+  if (!text.trim()) return null;
+  // 1. 精确题材映射（优先）
+  for (const [kw, id] of Object.entries(GENRE_TO_TEMPLATE)) {
+    if (text.includes(kw)) return id;
+  }
+  // 2. 模板字段模糊匹配
+  let best: string | null = null;
+  let bestScore = 0;
+  for (const t of tStore.allTemplates) {
+    let score = 0;
+    if (text.includes(t.name)) score += 12;
+    for (const kw of [...t.tags, t.id, t.description, t.worldTendency]) {
+      if (kw && text.includes(kw.toLowerCase())) score += 3;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = t.id;
+    }
+  }
+  return bestScore > 0 ? best : null;
+}
+
+/** 把 AI 提炼的角色列表批量写入角色管理（兼容中英文字段名） */
+async function saveCharacters(projectId: string, chars: any[]) {
+  if (!Array.isArray(chars) || chars.length === 0) return;
+  for (const c of chars.slice(0, 15)) {
+    if (!c || !c.name) continue;
+    const char: Character = {
+      id: `char_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      name: String(c.name || c.姓名 || "新角色"),
+      gender: String(c.gender || c.性别 || "未知"),
+      age: String(c.age || c.年龄 || ""),
+      personality: String(c.personality || c.性格 || c.traits || ""),
+      appearance: String(c.appearance || c.外貌 || ""),
+      background: String(c.background || c.背景 || c.role || ""),
+      relationships: String(c.relationships || c.关系 || ""),
+      speech_pattern: String(c.speech_pattern || c.说话风格 || ""),
+      notes: String(c.notes || c.备注 || ""),
+    };
+    try {
+      await invoke("save_character", { projectId, character: char });
+    } catch { /* 忽略单个角色保存失败 */ }
+  }
+}
+
+/**
+ * 根据刚生成的小说内容，自动生成并回填：小说信息（书名/题材/简介）、大纲、世界观、角色管理、题材模板。
  * 在仿写/续写生成保存章节后调用（基于生成章节内容回填，覆盖/完善小说管理）。
  */
 async function autoFillNovelMeta(projectId: string) {
@@ -726,19 +815,27 @@ async function autoFillNovelMeta(projectId: string) {
 
   try {
     const aiStore = useAIStore();
-    const response = await invoke<any>("call_ai", {
-      baseUrl: aiStore.resolvedBaseUrl,
-      apiKey: aiStore.resolvedApiKey,
-      model: aiStore.resolvedModelName,
-      messages: [
-        {
-          role: "system",
-          content: `你是一位小说创作元信息专家。请根据用户提供的小说章节内容，提炼出这部小说的完整元信息，严格按以下 JSON 结构输出，不要加任何额外说明：
+    // 最多尝试 3 次：请求失败或 JSON 解析失败都会重试
+    let result: any = null;
+    let lastError: any = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await invoke<any>("call_ai", {
+          baseUrl: aiStore.resolvedBaseUrl,
+          apiKey: aiStore.resolvedApiKey,
+          model: aiStore.resolvedModelName,
+          messages: [
+            {
+              role: "system",
+              content: `你是一位小说创作元信息专家。请根据用户提供的小说章节内容，提炼出这部小说的完整元信息，严格按以下 JSON 结构输出，不要加任何额外说明，不要使用 Markdown 代码块包裹，直接输出 JSON：
 
 {
   "book_name": "书名",
-  "genre": "题材（如：都市异能/玄幻/仙侠/科幻/悬疑）",
+  "genre": "题材（如：都市异能/玄幻/仙侠/科幻/悬疑/言情/历史）",
   "description": "一句话简介（40字以内）",
+  "characters": [
+    {"name":"角色名","gender":"性别","age":"年龄","personality":"性格特征","appearance":"外貌","background":"背景经历","relationships":"与其他角色关系","speech_pattern":"说话风格"}
+  ],
   "world": {
     "content": "世界观核心设定描述（100-200字）",
     "factions": [{"name":"势力名","description":"描述","members":["成员"]}],
@@ -756,15 +853,25 @@ async function autoFillNovelMeta(projectId: string) {
 要求：
 - 基于已有章节内容合理提炼，不要凭空编造太多细节
 - genre 用常见网文题材分类
+- characters 列出已在章节中登场的主要角色（至少 3 个，最多 10 个），不要漏掉主角
 - outline.volumes 至少包含 1 卷，每卷下 chapters 列出已有的章节并补充分卷走向`,
-        },
-        { role: "user", content: sample },
-      ],
-      temperature: 0.4,
-      maxTokens: 8192,
-    });
-
-    const result = JSON.parse(response.content);
+            },
+            { role: "user", content: sample },
+          ],
+          temperature: 0.4,
+          maxTokens: 8192,
+        });
+        result = extractJsonContent(response.content);
+        break;
+      } catch (e) {
+        lastError = e;
+        console.warn(`自动回填小说元信息第 ${attempt} 次失败:`, e);
+        if (attempt < 3) {
+          await new Promise((r) => setTimeout(r, 800 * attempt)); // 逐次加长等待
+        }
+      }
+    }
+    if (!result) throw lastError || new Error("生成小说元信息失败");
 
     // 1. 回填小说信息（书名/题材/简介）
     const name = result.book_name || projectMeta?.name || "未命名小说";
@@ -809,10 +916,21 @@ async function autoFillNovelMeta(projectId: string) {
       await invoke("save_world", { projectId, worldSetting: world });
     }
 
+    // 4. 回填角色管理
+    await saveCharacters(projectId, result.characters);
+
+    // 5. 自动匹配题材模板（根据题材 + 世界观关键词，选中合适的风格模板）
+    const tStore = useTemplateStore();
+    const tid = matchGenreTemplate(result.genre || "", result.world?.content || "");
+    if (tid) tStore.setTemplate(tid);
+
     await projectStore.openProject(projectId);
-    ElMessage.success(`已自动回填小说信息：${name}（${result.genre || "题材未定"}）`);
+    ElMessage.success(
+      `已自动回填：小说信息/大纲/世界观/角色/题材模板（${result.genre || "题材未定"}）`
+    );
   } catch (e) {
     console.error("自动回填小说元信息失败:", e);
+    ElMessage.warning("自动回填小说管理失败（可稍后在 AI 面板重新生成触发）");
   }
 }
 
@@ -905,8 +1023,16 @@ async function fillMetaFromReference(projectId: string) {
     }
     oStore.saveOutline(projectId);
 
+    // 4. 回填角色管理（分析出的主要角色 → 角色管理）
+    await saveCharacters(projectId, analysis.main_characters);
+
+    // 5. 自动匹配题材模板（根据题材 + 风格摘要关键词，选中合适的风格模板）
+    const tStore = useTemplateStore();
+    const tid = matchGenreTemplate(genre, analysis.style_summary || "");
+    if (tid) tStore.setTemplate(tid);
+
     await projectStore.openProject(projectId);
-    ElMessage.success(`已将参考小说分析回填到「${baseName}」小说管理`);
+    ElMessage.success(`已将参考小说分析回填到「${baseName}」小说管理（信息/世界观/大纲/角色/题材模板）`);
   } catch (e) {
     console.error("基于参考分析回填失败:", e);
     ElMessage.error("回填小说管理失败: " + e);
@@ -974,6 +1100,8 @@ async function confirmSaveChapter() {
 
     showChapterDialog.value = false;
     pendingChapterMsg.value = null;
+    // 右侧聊天不再展示完整章节（太长），替换为简短提示
+    aiStore.replaceLastAssistant(`📖 已保存为章节「${title}」，全文已在中间编辑器展示，此处不再重复`);
     ElMessage.success(`章节「${title}」已创建并写入${group ? `（${group}）` : ""}`);
   } catch (e) {
     ElMessage.error("保存章节失败: " + e);

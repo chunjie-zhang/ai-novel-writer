@@ -9,6 +9,7 @@ import type {
 } from "@/types";
 import { WRITING_MODES } from "@/types";
 import { useAIStore } from "./ai";
+import { extractJsonContent } from "@/utils/ai";
 
 interface RawImportedNovel {
   id: string;
@@ -100,7 +101,7 @@ export const useReferenceStore = defineStore("reference", () => {
     }
   }
 
-  /** AI 分析小说 */
+  /** AI 分析小说（失败自动重试，最多 3 次） */
   async function analyzeNovel() {
     if (!chapters.value.length) return;
 
@@ -115,16 +116,12 @@ export const useReferenceStore = defineStore("reference", () => {
         .join("\n\n");
 
       const aiStore = useAIStore();
-      const response = await invoke<any>("call_ai", {
-        baseUrl: aiStore.resolvedBaseUrl,
-        apiKey: aiStore.resolvedApiKey,
-        model: aiStore.resolvedModelName,
-        messages: [
-          {
-            role: "system",
-            content: `你是一名专业的小说分析专家。请分析以下小说章节内容，输出 JSON 格式的分析结果。
 
-严格按照以下 JSON 结构返回，不要加任何额外说明：
+      const systemMsg = {
+        role: "system" as const,
+        content: `你是一名专业的小说分析专家。请分析以下小说章节内容，输出 JSON 格式的分析结果。
+
+严格按照以下 JSON 结构返回，不要加任何额外说明，不要使用 Markdown 代码块包裹，直接输出 JSON：
 {
   "genre": "题材（如：都市异能/玄幻/仙侠/科幻/悬疑/都市/历史）",
   "style_summary": "整体风格描述，30-50字",
@@ -138,14 +135,37 @@ export const useReferenceStore = defineStore("reference", () => {
   "plot_structure": "情节结构分析",
   "imitable_aspects": ["适合仿写的维度1", "维度2", "维度3"]
 }`,
-          },
-          { role: "user", content: sampleContent },
-        ],
-        temperature: 0.3,
-        maxTokens: 4096,
-      });
+      };
 
-      const result = JSON.parse(response.content);
+      // 最多尝试 3 次：请求失败或 JSON 解析失败都会重试
+      let result: any = null;
+      let lastError: any = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const response = await invoke<any>("call_ai", {
+            baseUrl: aiStore.resolvedBaseUrl,
+            apiKey: aiStore.resolvedApiKey,
+            model: aiStore.resolvedModelName,
+            messages: [
+              systemMsg,
+              { role: "user", content: sampleContent },
+            ],
+            temperature: 0.3,
+            maxTokens: 8192,
+          });
+          // 健壮提取 JSON（兼容代码块包裹/前后说明文字）
+          result = extractJsonContent(response.content);
+          break;
+        } catch (e) {
+          lastError = e;
+          console.warn(`分析第 ${attempt} 次失败:`, e);
+          if (attempt < 3) {
+            await new Promise((r) => setTimeout(r, 800 * attempt)); // 逐次加长等待
+          }
+        }
+      }
+      if (!result) throw lastError || new Error("分析多次失败");
+
       analysis.value = {
         genre: result.genre || "",
         style_summary: result.style_summary || "",

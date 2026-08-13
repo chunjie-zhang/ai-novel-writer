@@ -138,8 +138,17 @@
 
       <!-- 编辑器内容区 -->
       <div class="editor-body">
+        <!-- AI 流式创作预览（打字机实时显示在中间） -->
+        <div v-if="aiStreaming" class="ai-stream-preview">
+          <div class="asp-header">
+            <span class="asp-spinner"></span>
+            <span>AI 正在创作{{ streamTargetLabel }}…</span>
+          </div>
+          <div class="asp-content" v-html="renderStreamMarkdown(aiStore.streamingDraft)"></div>
+        </div>
+
         <!-- 无章节时的提示 -->
-        <div v-if="!editorStore.currentChapter" class="no-chapter-hint">
+        <div v-else-if="!editorStore.currentChapter" class="no-chapter-hint">
           <el-icon :size="48" color="var(--text-3)"><Icon icon="lucide:pen-line" /></el-icon>
           <p>请在左侧选择一个章节，或新建一个章节开始写作</p>
           <el-button type="primary" @click="handleNewChapter">新建章节</el-button>
@@ -454,6 +463,81 @@ const chapterNo = computed(() => {
   const m = editorStore.chapterTitle.match(/第(\d+)章/);
   return m ? m[1] : "";
 });
+
+// ===== AI 流式创作预览（中间编辑器实时展示打字机效果） =====
+const aiStreaming = computed(
+  () => aiStore.isGenerating && aiStore.streamingDraft.length > 0
+);
+const streamTargetLabel = computed(() => {
+  if (editorStore.currentChapter) {
+    return ` → ${editorStore.currentChapter.title}`;
+  }
+  if (projectStore.currentProject) {
+    return ` → ${projectStore.currentProject.name}`;
+  }
+  return "";
+});
+
+/** 极简 Markdown 渲染（流式预览用）：处理标题/段落/列表/引用/代码块/粗斜体，转义 HTML 防 XSS */
+function renderStreamMarkdown(text: string): string {
+  const escapeHtml = (s: string) =>
+    s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  const inline = (s: string) =>
+    s
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+      .replace(/`([^`]+)`/g, "<code>$1</code>");
+  const lines = escapeHtml(text).split("\n");
+  const out: string[] = [];
+  let inCode = false;
+  let codeBuf: string[] = [];
+  let listBuf: string[] = [];
+  const flushList = () => {
+    if (listBuf.length) {
+      out.push(`<ul>${listBuf.map((li) => `<li>${li}</li>`).join("")}</ul>`);
+      listBuf = [];
+    }
+  };
+  for (const raw of lines) {
+    const line = raw;
+    if (line.trim().startsWith("```")) {
+      flushList();
+      if (inCode) {
+        out.push(`<pre><code>${codeBuf.join("\n")}</code></pre>`);
+        codeBuf = [];
+        inCode = false;
+      } else {
+        inCode = true;
+      }
+      continue;
+    }
+    if (inCode) { codeBuf.push(line); continue; }
+    if (/^#{1,6}\s/.test(line)) {
+      flushList();
+      const level = line.match(/^#+/)![0].length;
+      const content = inline(line.replace(/^#+\s*/, ""));
+      out.push(`<h${Math.min(level, 6)}>${content}</h${Math.min(level, 6)}>`);
+    } else if (/^\s*[-*+]\s+/.test(line)) {
+      listBuf.push(inline(line.replace(/^\s*[-*+]\s+/, "")));
+    } else if (/^\s*>\s?/.test(line)) {
+      flushList();
+      out.push(`<blockquote>${inline(line.replace(/^\s*>\s?/, ""))}</blockquote>`);
+    } else if (line.trim() === "") {
+      flushList();
+    } else {
+      flushList();
+      out.push(`<p>${inline(line)}</p>`);
+    }
+  }
+  flushList();
+  if (inCode) out.push(`<pre><code>${codeBuf.join("\n")}</code></pre>`);
+  return out.join("\n");
+}
 // 标题栏输入框内容 = 章节标题去掉「第N章」前缀
 watch(
   () => editorStore.chapterTitle,
@@ -1001,6 +1085,95 @@ function createNewProject() {
 .no-chapter-hint p {
   font-size: 14px;
   color: var(--text-2);
+}
+
+/* AI 流式创作预览 */
+.ai-stream-preview {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  background: var(--panel-bg);
+}
+.asp-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg-2);
+  color: var(--text-2);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.asp-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  animation: asp-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes asp-spin {
+  to { transform: rotate(360deg); }
+}
+.asp-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 28px;
+  line-height: 1.9;
+  font-size: 15px;
+  color: var(--text-1);
+  word-break: break-word;
+}
+.asp-content h1, .asp-content h2, .asp-content h3,
+.asp-content h4, .asp-content h5, .asp-content h6 {
+  margin: 1.2em 0 0.5em;
+  color: var(--text-1);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.asp-content h1 { font-size: 22px; }
+.asp-content h2 { font-size: 19px; }
+.asp-content h3 { font-size: 17px; }
+.asp-content p { margin: 0.5em 0; }
+.asp-content blockquote {
+  margin: 0.6em 0;
+  padding: 4px 14px;
+  border-left: 3px solid var(--accent);
+  color: var(--text-2);
+  background: var(--panel-bg-2);
+}
+.asp-content ul {
+  margin: 0.4em 0;
+  padding-left: 1.5em;
+  list-style: disc;
+}
+.asp-content li { margin: 0.2em 0; }
+.asp-content code {
+  background: var(--panel-bg-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: var(--accent);
+}
+.asp-content pre {
+  background: var(--panel-bg-2);
+  padding: 12px 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.6em 0;
+}
+.asp-content pre code {
+  background: transparent;
+  padding: 0;
+  color: var(--text-1);
+}
+/* 打字机光标 */
+.asp-content:last-child {
+  caret-color: var(--accent);
 }
 
 .milkdown-editor {
