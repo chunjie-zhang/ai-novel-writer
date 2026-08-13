@@ -113,6 +113,9 @@
         <el-tab-pane label="存储位置">
           <StorageSettings />
         </el-tab-pane>
+        <el-tab-pane label="数据管理">
+          <DataDirSettings />
+        </el-tab-pane>
       </el-tabs>
     </el-dialog>
 
@@ -135,6 +138,7 @@ import SkillMarket from "@/views/SkillMarket.vue";
 import ModelConfig from "@/components/ai/ModelConfig.vue";
 import StorageSettings from "@/components/ai/StorageSettings.vue";
 import AppearanceSettings from "@/components/ai/AppearanceSettings.vue";
+import DataDirSettings from "@/components/ai/DataDirSettings.vue";
 import WelcomeGuide from "@/components/onboarding/WelcomeGuide.vue";
 import { useThemeStore } from "@/stores/theme";
 

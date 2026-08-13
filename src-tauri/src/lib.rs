@@ -34,6 +34,8 @@ pub fn run() {
             commands::save_reference_state,
             commands::load_reference_states,
             commands::delete_reference_state,
+            commands::get_data_dir_path,
+            commands::open_data_dir,
             commands::migrate_projects,
             commands::backup_project,
             commands::list_backups,

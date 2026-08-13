@@ -6,11 +6,19 @@
       </template>
       <ModelConfig />
     </el-card>
+
+    <el-card style="margin-top: 16px">
+      <template #header>
+        <span>应用数据目录</span>
+      </template>
+      <DataDirSettings />
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import ModelConfig from "@/components/ai/ModelConfig.vue";
+import DataDirSettings from "@/components/ai/DataDirSettings.vue";
 </script>
 
 <style scoped>

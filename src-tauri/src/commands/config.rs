@@ -159,6 +159,47 @@ fn get_reference_dir(app_handle: &tauri::AppHandle) -> PathBuf {
         .join("reference")
 }
 
+// ===== 应用数据目录（统一入口：AI 配置 / 自定义技能 / 参考小说 / 项目都在此） =====
+
+/// 应用数据根目录：{app_data_dir}/
+/// 结构：
+///   ai-config.json        DeepSeek API Key 等 AI 配置
+///   app-config.json       全局配置（存储路径）
+///   project-registry.json 项目注册表
+///   projects/             小说项目（章节、角色、世界观）
+///   skills/               自定义技能
+///   reference/            参考小说分析数据
+fn get_app_data_dir(app_handle: &tauri::AppHandle) -> PathBuf {
+    app_handle.path().app_data_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+}
+
+/// 获取应用数据根目录路径（供前端展示"集中管理"位置）
+#[tauri::command]
+pub fn get_data_dir_path(app_handle: tauri::AppHandle) -> Result<String, String> {
+    let dir = get_app_data_dir(&app_handle);
+    fs::create_dir_all(&dir).map_err(|e| format!("创建数据目录失败: {}", e))?;
+    Ok(dir.to_string_lossy().to_string())
+}
+
+/// 用系统文件管理器打开应用数据根目录（macOS Finder / Windows 资源管理器 / Linux 文件管理器）
+#[tauri::command]
+pub fn open_data_dir(app_handle: tauri::AppHandle) -> Result<(), String> {
+    let dir = get_app_data_dir(&app_handle);
+    fs::create_dir_all(&dir).map_err(|e| format!("创建数据目录失败: {}", e))?;
+    let dir_str = dir.to_string_lossy().to_string();
+    #[cfg(target_os = "macos")]
+    let status = std::process::Command::new("open").arg(&dir_str).status();
+    #[cfg(target_os = "windows")]
+    let status = std::process::Command::new("explorer").arg(&dir_str).status();
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let status = std::process::Command::new("xdg-open").arg(&dir_str).status();
+    #[cfg(not(any(unix, target_os = "windows")))]
+    let status = Err(std::io::Error::new(std::io::ErrorKind::Other, "unsupported platform"));
+    status.map_err(|e| format!("打开数据目录失败: {}", e))?;
+    Ok(())
+}
+
 /// 参考小说 id → 安全文件名
 fn reference_file_name(id: &str) -> String {
     format!("{}.json", id.replace(['/', '\\', ':'], "_"))

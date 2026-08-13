@@ -32,6 +32,11 @@
           delete window.__REF_STORE__[args.id];
           persist();
           return null;
+        case 'get_data_dir_path':
+          return '/mock/app-data-dir';
+        case 'open_data_dir':
+          window.__OPENED_DATA_DIR__ = true;
+          return null;
         default:
           return null;
       }
