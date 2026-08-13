@@ -786,7 +786,15 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
     statusText: `准备续写 ${totalChapters} 章…`,
   };
   try {
-    const BATCH = 3; // 每批 3 章（约 4000-5000 字，安全在单次输出上限内）
+    // 每章目标字数（全局配置，0=不限制）。分批续写也须遵守每章字数，否则每章只写 1000 字左右
+    const targetPerChapter = aiStore.targetWordCount || 0;
+    // 每章约需 tokens（中文 1 字 ≈ 1.3~1.5 token，取 1.8 留余量）
+    const tokensPerChapter = targetPerChapter > 0 ? Math.ceil(targetPerChapter * 1.8) : 2600;
+    const MAX_BATCH_TOKENS = 16000; // 单次输出安全上限
+    // 动态每批章数：保证每章达到目标字数（有字数限制时可能只能每批 1-2 章）
+    const BATCH = targetPerChapter > 0
+      ? Math.min(3, Math.max(1, Math.floor(MAX_BATCH_TOKENS / tokensPerChapter)))
+      : 3;
     // 起始章号 = 目标小说已有章节的最大编号 + 1（无则从 1 开始），避免从第 1 章重写
     const startChapter = Math.max(maxExistingChapterNum(), projectStore.chapters.length) + 1;
     // 已有章节标题（作为衔接上下文；只保留最后一章标题用于衔接）
@@ -839,15 +847,25 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
         }
       }
       prompt += `\n每章用 Markdown 一级标题「# 章节标题」开头，标题统一用「第N章 标题」且 N 用阿拉伯数字（如「第${currentStart}章 …」），不要用中文数字，不要用「第N卷」作为章节标题。章节之间用空行分隔，不要只写一章就收尾。`;
+      // 每章字数要求：让每章都达到目标字数，避免每章过短
+      if (targetPerChapter > 0) {
+        const low = Math.round(targetPerChapter * 0.85);
+        const high = Math.round(targetPerChapter * 1.15);
+        prompt += `\n【每章字数要求（必须遵守）】本批共 ${batch} 章，**每一章**的正文汉字数都要控制在约 ${targetPerChapter} 字（合理范围 ${low}~${high} 字），不要每章只写 1000 字左右就收尾；每章内容要完整充实。`;
+      }
 
       let content = "";
       try {
+        // 动态 maxTokens：batch 章 × 每章 tokens，与安全上限取小
+        const batchMaxTokens = targetPerChapter > 0
+          ? Math.min(MAX_BATCH_TOKENS, Math.ceil(batch * targetPerChapter * 1.8))
+          : 8000;
         content = await ai.silentCall(
           [
             { role: "system", content: ai.systemPrompt || "你是一位专业的小说创作助手。" },
             { role: "user", content: prompt },
           ],
-          { temperature: 0.7, maxTokens: 8000 }
+          { temperature: 0.7, maxTokens: batchMaxTokens }
         );
       } catch (e) {
         console.error("分批续写第", written + 1, "批失败:", e);
