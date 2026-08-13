@@ -579,7 +579,8 @@ async function handleSend() {
   const savedMaxTokens = aiStore.maxTokens;
   // 多章节意图：用户要求"续写N章/写N章/接下来N章"（N≥2）时，按章输出，不再限制总字数（否则会被压成 1 章）
   // 允许"续写"与"章"之间有词语（如"续写接下来的20章"）；"一章/1章"仍视为单章
-  const wantsMultiChapter = /(?:[2-9]\d*|[二三四五六七八九十百千万两]+)\s*(章|章节)/.test(text);
+  // 数字支持 2-9 及 ≥10（如 10/12/20），避免 1 开头的两位数被漏判
+  const wantsMultiChapter = /(?:[2-9]|[1-9]\d+|[二三四五六七八九十百千万两]+)\s*(章|章节)/.test(text);
   if (!wantsMultiChapter && aiStore.targetWordCount && aiStore.targetWordCount > 0) {
     const n = aiStore.targetWordCount;
     const low = Math.round(n * 0.85);
