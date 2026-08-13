@@ -361,7 +361,7 @@ import { useOutlineStore } from "@/stores/outline";
 import { useTemplateStore } from "@/stores/templates";
 import { buildSmartContext } from "@/utils/nlp";
 import { extractJsonContent } from "@/utils/ai";
-import { normalizeChapterTitle } from "@/utils/chapterTitle";
+import { normalizeChapterTitle, chineseToArabic } from "@/utils/chapterTitle";
 
 const aiStore = useAIStore();
 const skillStore = useSkillStore();
@@ -590,6 +590,18 @@ async function handleSend() {
 
   aiStore.systemPrompt = systemPrompt;
 
+  // ===== 大批量续写（N≥4 章）：分批自动续写 =====
+  // 单次调用受 maxTokens 限制，写不完 N 章；分批生成 + 保存 + 衔接上下文，直到写满
+  if (wantsMultiChapter) {
+    const chapterCount = extractChapterCount(text);
+    if (chapterCount >= 4) {
+      await generateMultiChapter(text, chapterCount);
+      aiStore.maxTokens = savedMaxTokens; // 恢复原上限
+      scrollToBottom();
+      return;
+    }
+  }
+
   await aiStore.sendMessage(text);
   aiStore.maxTokens = savedMaxTokens; // 恢复原上限
 
@@ -666,8 +678,88 @@ function splitChapters(content: string): { title: string; body: string }[] {
     .filter((c) => c.body.length > 0);
 }
 
+/** 从用户输入中提取要求的章节数量（如"续写20章""写十章"），提取不到返回 0 */
+function extractChapterCount(text: string): number {
+  const m = text.match(/([0-9]+|[一二三四五六七八九十百千万两]+)\s*(章|章节)/);
+  if (!m) return 0;
+  const raw = m[1];
+  if (/^\d+$/.test(raw)) return parseInt(raw, 10);
+  return chineseToArabic(raw) || 0;
+}
+
+/**
+ * 分批续写：当用户要求"续写 N 章"（N 较大，单次受 maxTokens 限制写不完）时，
+ * 每批生成若干章并自动保存，把进度作为上下文继续下一批，直到写完 N 章。
+ * 使用静默调用（不污染聊天、不覆盖中间预览），用进度提示反馈。
+ */
+async function generateMultiChapter(originalText: string, totalChapters: number) {
+  const projectId = outputProjectId.value;
+  if (!projectId) {
+    ElMessage.warning("请先选择要写入的小说");
+    return;
+  }
+  const BATCH = 3; // 每批 3 章（约 4000-5000 字，安全在单次输出上限内）
+  const ai = useAIStore();
+  let written = 0;
+  const savedTitles: string[] = [];
+  let guard = 0;
+  const MAX_BATCHES = 30; // 最多 30 批，防止异常死循环
+
+  while (written < totalChapters && guard < MAX_BATCHES) {
+    guard++;
+    const remaining = totalChapters - written;
+    const batch = Math.min(BATCH, remaining);
+
+    // 本批提示：从第 written+1 章开始，衔接上一章结尾
+    let prompt = `【批量续写任务】\n${originalText}\n\n请从第 ${written + 1} 章开始，续写接下来的 ${batch} 章。`;
+    if (written > 0) {
+      prompt += `\n已完成章节：${savedTitles.join("、")}。请严格衔接上一章（第 ${written} 章【${savedTitles[savedTitles.length - 1]}】）的结尾剧情，保持人物、世界观、剧情连贯，章节编号顺延。`;
+    }
+    prompt += `\n每章用 Markdown 一级标题「# 章节标题」开头，章节之间用空行分隔，不要只写一章就收尾。`;
+
+    let content = "";
+    try {
+      content = await ai.silentCall(
+        [
+          { role: "system", content: ai.systemPrompt || "你是一位专业的小说创作助手。" },
+          { role: "user", content: prompt },
+        ],
+        { temperature: 0.7, maxTokens: 8000 }
+      );
+    } catch (e) {
+      console.error("分批续写第", written + 1, "批失败:", e);
+      ElMessage.warning(`续写中断（第 ${written + 1} 章起），可稍后重试`);
+      break;
+    }
+
+    const chunks = splitChapters(content);
+    if (chunks.length === 0) {
+      ElMessage.warning("本批未产出有效章节，续写已停止");
+      break;
+    }
+
+    // 每批只保存，不做元信息回填/不替换聊天消息（避免重复、拖慢、误改历史）；全部完成后统一回填一次
+    await saveMultipleChapters(projectId, chunks, { skipAutoFill: true, skipReplaceAssistant: true });
+    for (const c of chunks) savedTitles.push(c.title);
+    written += chunks.length;
+    ElMessage.success(`已续写 ${written}/${totalChapters} 章`);
+  }
+
+  if (written >= totalChapters) {
+    // 全部完成后统一回填一次小说元信息（信息/大纲/世界观/角色/题材模板）
+    await autoFillNovelMeta(projectId);
+    ElMessage.success(`全部 ${totalChapters} 章续写完成！`);
+  } else if (written > 0) {
+    ElMessage.warning(`已完成 ${written}/${totalChapters} 章（剩余可再次发起续写）`);
+  }
+}
+
 /** 多章节批量保存：把拆分出的多个章节分别新建为独立章节 */
-async function saveMultipleChapters(projectId: string, chapters: { title: string; body: string }[]) {
+async function saveMultipleChapters(
+  projectId: string,
+  chapters: { title: string; body: string }[],
+  opts: { skipAutoFill?: boolean; skipReplaceAssistant?: boolean } = {}
+) {
   const existing = new Set(projectStore.chapters.map((c) => c.title));
   const savedTitles: string[] = [];
   for (const ch of chapters) {
@@ -702,13 +794,17 @@ async function saveMultipleChapters(projectId: string, chapters: { title: string
     await editorStore.openChapterWithMemory(last, c, projectId);
   }
   // 右侧聊天不再展示完整章节，替换为简短提示
-  aiStore.replaceLastAssistant(
-    `📖 已拆分为 ${savedTitles.length} 个章节保存：${savedTitles.join("、")}`
-  );
+  if (!opts.skipReplaceAssistant) {
+    aiStore.replaceLastAssistant(
+      `📖 已拆分为 ${savedTitles.length} 个章节保存：${savedTitles.join("、")}`
+    );
+  }
   ElMessage.success(`已将内容拆分为 ${savedTitles.length} 个章节保存`);
 
   // 自动回填小说元信息（大纲/世界观/小说信息/角色/题材模板）
-  await autoFillNovelMeta(projectId);
+  if (!opts.skipAutoFill) {
+    await autoFillNovelMeta(projectId);
+  }
 }
 
 /** 仿写/续写生成后：把最后一条 AI 回复写入目标章节，并在中间编辑器展示 */

@@ -58,3 +58,27 @@ export function buildChapterFileName(title: string, group: string): string {
   const base = safe || `chapter_${Date.now()}`;
   return group ? `${group}/${base}.md` : `${base}.md`;
 }
+
+/** 中文数字 → 阿拉伯数字（支持"一~九、十、百、千、两"，含"二十三""一百零五"等） */
+export function chineseToArabic(s: string): number {
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  const digit: Record<string, number> = { "零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9 };
+  const unit: Record<string, number> = { "十": 10, "百": 100, "千": 1000, "万": 10000 };
+  let total = 0;
+  let section = 0;
+  let num = 0;
+  for (const ch of s) {
+    if (ch in digit) {
+      num = digit[ch];
+    } else if (ch in unit) {
+      const u = unit[ch];
+      section += (num || 1) * u;
+      num = 0;
+      if (u >= 10000) {
+        total += section;
+        section = 0;
+      }
+    }
+  }
+  return total + section + num;
+}
