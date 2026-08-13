@@ -687,6 +687,19 @@ function extractChapterCount(text: string): number {
   return chineseToArabic(raw) || 0;
 }
 
+/** 目标小说已有章节的最大「第N章」编号（标题非编号格式则用章节数量兜底） */
+function maxExistingChapterNum(): number {
+  let max = 0;
+  for (const c of projectStore.chapters) {
+    const m = String(c.title || "").match(/第\s*([0-9一二三四五六七八九十百千零两]+)\s*[章节篇回]/);
+    if (m) {
+      const n = chineseToArabic(m[1].trim());
+      if (!isNaN(n) && n > max) max = n;
+    }
+  }
+  return max;
+}
+
 /**
  * 分批续写：当用户要求"续写 N 章"（N 较大，单次受 maxTokens 限制写不完）时，
  * 每批生成若干章并自动保存，把进度作为上下文继续下一批，直到写完 N 章。
@@ -700,8 +713,12 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
   }
   const BATCH = 3; // 每批 3 章（约 4000-5000 字，安全在单次输出上限内）
   const ai = useAIStore();
+  // 起始章号 = 目标小说已有章节的最大编号 + 1（无则从 1 开始），避免从第 1 章重写
+  const startChapter = Math.max(maxExistingChapterNum(), projectStore.chapters.length) + 1;
+  // 已有章节标题（作为衔接上下文；只保留最后一章标题用于衔接）
+  const existingTitles = projectStore.chapters.map((c) => c.title).filter(Boolean);
+  const savedTitles: string[] = [...existingTitles];
   let written = 0;
-  const savedTitles: string[] = [];
   let guard = 0;
   const MAX_BATCHES = 30; // 最多 30 批，防止异常死循环
 
@@ -709,11 +726,17 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
     guard++;
     const remaining = totalChapters - written;
     const batch = Math.min(BATCH, remaining);
+    const currentStart = startChapter + written; // 本批起始章号
 
-    // 本批提示：从第 written+1 章开始，衔接上一章结尾
-    let prompt = `【批量续写任务】\n${originalText}\n\n请从第 ${written + 1} 章开始，续写接下来的 ${batch} 章。`;
+    // 本批提示：从第 currentStart 章开始，衔接上一章结尾
+    let prompt = `【批量续写任务】\n${originalText}\n\n请从第 ${currentStart} 章开始，续写接下来的 ${batch} 章（章节编号从 ${currentStart} 顺延，不要重新从第 1 章开始）。`;
     if (written > 0) {
-      prompt += `\n已完成章节：${savedTitles.join("、")}。请严格衔接上一章（第 ${written} 章【${savedTitles[savedTitles.length - 1]}】）的结尾剧情，保持人物、世界观、剧情连贯，章节编号顺延。`;
+      const batchTitles = savedTitles.slice(existingTitles.length).join("、");
+      prompt += `\n本批次已完成章节：${batchTitles}。请严格衔接上一章（第 ${currentStart - 1} 章【${savedTitles[savedTitles.length - 1]}】）的结尾剧情，保持人物、世界观、剧情连贯，章节编号顺延。`;
+    } else if (existingTitles.length > 0) {
+      // 已有章节：衔接最后一章（即第 startChapter-1 章）
+      const lastExisting = existingTitles[existingTitles.length - 1];
+      prompt += `\n该小说已有 ${existingTitles.length} 章（${existingTitles.join("、")}）。请严格衔接最后一章（第 ${startChapter - 1} 章【${lastExisting}】）的结尾剧情续写，保持人物、世界观、剧情连贯，章节编号顺延。`;
     }
     prompt += `\n每章用 Markdown 一级标题「# 章节标题」开头，章节之间用空行分隔，不要只写一章就收尾。`;
 
