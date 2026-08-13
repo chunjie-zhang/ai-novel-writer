@@ -595,6 +595,8 @@ async function handleSend() {
   if (wantsMultiChapter) {
     const chapterCount = extractChapterCount(text);
     if (chapterCount >= 4) {
+      // 右侧聊天显示用户需求（分批续写走静默调用，这里手动补一条 user 消息）
+      aiStore.addMessage("user", text);
       await generateMultiChapter(text, chapterCount);
       aiStore.maxTokens = savedMaxTokens; // 恢复原上限
       scrollToBottom();
@@ -771,8 +773,18 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
   if (written >= totalChapters) {
     // 全部完成后统一回填一次小说元信息（信息/大纲/世界观/角色/题材模板）
     await autoFillNovelMeta(projectId);
+    const newTitles = savedTitles.slice(existingTitles.length);
+    aiStore.addMessage(
+      "assistant",
+      `✅ 已续写完成 ${totalChapters} 章（第 ${startChapter}~${startChapter + totalChapters - 1} 章）：${newTitles.join("、")}`
+    );
     ElMessage.success(`全部 ${totalChapters} 章续写完成！`);
   } else if (written > 0) {
+    const newTitles = savedTitles.slice(existingTitles.length);
+    aiStore.addMessage(
+      "assistant",
+      `⚠️ 已续写 ${written}/${totalChapters} 章（第 ${startChapter}~${startChapter + written - 1} 章）：${newTitles.join("、")}。剩余可再次发起续写`
+    );
     ElMessage.warning(`已完成 ${written}/${totalChapters} 章（剩余可再次发起续写）`);
   }
 }
