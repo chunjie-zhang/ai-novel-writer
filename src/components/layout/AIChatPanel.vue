@@ -585,7 +585,7 @@ async function handleSend() {
     aiStore.maxTokens = Math.min(aiStore.maxTokens, Math.ceil(n * 1.8));
   } else if (wantsMultiChapter) {
     // 多章节续写：提示 AI 按章节逐个输出，每章相对独立
-    systemPrompt = `${systemPrompt}\n\n【多章节续写要求】\n本次请按用户要求的章节数量逐章输出，每个章节用 Markdown 一级标题「# 章节标题」开头，章节之间用空行分隔。不要把所有章节挤成一大段，也不要只写一章就收尾。`;
+    systemPrompt = `${systemPrompt}\n\n【多章节续写要求】\n本次请按用户要求的章节数量逐章输出，每个章节用 Markdown 一级标题「# 章节标题」开头，章节之间用空行分隔。\n标题格式必须统一：一律用「第N章 标题」且 N 用阿拉伯数字（如「第6章 归途」），不要用中文数字，不要用「第N卷」作为章节标题，不要重复卷标题。不要把所有章节挤成一大段，也不要只写一章就收尾。`;
   }
 
   aiStore.systemPrompt = systemPrompt;
@@ -645,7 +645,7 @@ const chapterForm = reactive({ title: "", group: "" });
 
 /**
  * 将 AI 回复按章节标题拆分为多个章节块。
- * 识别「# 标题」与独立行的「第X章 / 第X节」作为章节边界。
+ * 识别「# 标题」与独立行的「第X章 / 第X节」作为章节边界；「第X卷」卷标题不作为章节。
  * 仅当有 ≥2 个带正文的章节块时才算多章节。
  */
 function splitChapters(content: string): { title: string; body: string }[] {
@@ -657,7 +657,12 @@ function splitChapters(content: string): { title: string; body: string }[] {
     if (!t) return null;
     // Markdown 标题：# xxx
     const md = t.match(/^#{1,6}\s+(.+)$/);
-    if (md) return md[1].trim();
+    if (md) {
+      const h = md[1].trim();
+      // 卷标题（如「第1卷」「第一卷 星渊崛起」）不作为章节，跳过
+      if (/^第\s*[\d一二三四五六七八九十百千零两]+\s*卷/.test(h)) return null;
+      return h;
+    }
     // 独立行的「第X章 / 第X节」（短标题）
     if (/^第[\d一二三四五六七八九十百千零]+[章节][^\n]{0,50}$/.test(t)) {
       return t;
@@ -703,6 +708,27 @@ function maxExistingChapterNum(): number {
 }
 
 /**
+ * 统一章节标题格式：
+ * - 中文数字 → 阿拉伯数字（第二章 → 第2章，含"第 二 章"空格变体）
+ * - 去除重复/多余的卷前缀（"第一卷 第一卷 星渊崛起" → "第一卷 星渊崛起"）
+ * - 去除"第X章"后的多余空格
+ */
+function normalizeChapterTitleNum(title: string): string {
+  let t = (title || "").trim();
+  t = t.replace(/第\s*([一二三四五六七八九十百千零两]+)\s*(章|章回|节)/g, (_m, num, suffix) => `第${chineseToArabic(num)}${suffix}`);
+  // 去重复卷前缀：多个"第X卷"连写只留第一个
+  t = t.replace(/^((?:第\s*[\d一二三四五六七八九十百千零两]+\s*卷\s*)+)(.*)$/, (m, vols, rest) => {
+    const volsList = vols.trim().split(/\s+/).filter(Boolean);
+    if (volsList.length > 1) {
+      return `${volsList[0]} ${rest}`;
+    }
+    return m;
+  });
+  t = t.replace(/\s+/g, " ").trim();
+  return t;
+}
+
+/**
  * 分批续写：当用户要求"续写 N 章"（N 较大，单次受 maxTokens 限制写不完）时，
  * 每批生成若干章并自动保存，把进度作为上下文继续下一批，直到写完 N 章。
  * 使用静默调用（不污染聊天、不覆盖中间预览），用进度提示反馈。
@@ -740,7 +766,7 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
       const lastExisting = existingTitles[existingTitles.length - 1];
       prompt += `\n该小说已有 ${existingTitles.length} 章（${existingTitles.join("、")}）。请严格衔接最后一章（第 ${startChapter - 1} 章【${lastExisting}】）的结尾剧情续写，保持人物、世界观、剧情连贯，章节编号顺延。`;
     }
-    prompt += `\n每章用 Markdown 一级标题「# 章节标题」开头，章节之间用空行分隔，不要只写一章就收尾。`;
+    prompt += `\n每章用 Markdown 一级标题「# 章节标题」开头，标题统一用「第N章 标题」且 N 用阿拉伯数字（如「第${currentStart}章 …」），不要用中文数字，不要用「第N卷」作为章节标题。章节之间用空行分隔，不要只写一章就收尾。`;
 
     let content = "";
     try {
@@ -764,9 +790,9 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
     }
 
     // 每批只保存，不做元信息回填/不替换聊天消息（避免重复、拖慢、误改历史）；全部完成后统一回填一次
-    await saveMultipleChapters(projectId, chunks, { skipAutoFill: true, skipReplaceAssistant: true });
-    for (const c of chunks) savedTitles.push(c.title);
-    written += chunks.length;
+    const savedTitlesBatch = await saveMultipleChapters(projectId, chunks, { skipAutoFill: true, skipReplaceAssistant: true });
+    for (const t of savedTitlesBatch) savedTitles.push(t);
+    written += savedTitlesBatch.length;
     ElMessage.success(`已续写 ${written}/${totalChapters} 章`);
   }
 
@@ -794,11 +820,12 @@ async function saveMultipleChapters(
   projectId: string,
   chapters: { title: string; body: string }[],
   opts: { skipAutoFill?: boolean; skipReplaceAssistant?: boolean } = {}
-) {
+): Promise<string[]> {
   const existing = new Set(projectStore.chapters.map((c) => c.title));
   const savedTitles: string[] = [];
   for (const ch of chapters) {
-    let title = normalizeChapterTitle(ch.title);
+    // 统一标题格式：去掉 #/路径/.md + 统一编号（中文数字→阿拉伯、去重复卷前缀）
+    let title = normalizeChapterTitleNum(normalizeChapterTitle(ch.title));
     if (!title) title = smartTitleFromContent(ch.body);
     if (!title) title = `AI生成_${Date.now()}`;
     let base = title;
@@ -840,6 +867,7 @@ async function saveMultipleChapters(
   if (!opts.skipAutoFill) {
     await autoFillNovelMeta(projectId);
   }
+  return savedTitles; // 返回规范化后的章节标题列表
 }
 
 /** 仿写/续写生成后：把最后一条 AI 回复写入目标章节，并在中间编辑器展示 */
@@ -865,7 +893,7 @@ async function autoSaveToChapter() {
 
     if (isNew) {
       // ===== 新建章节：提取标题，写入并展示 =====
-      let title = normalizeChapterTitle(extractChapterTitle(aiContent));
+      let title = normalizeChapterTitleNum(normalizeChapterTitle(extractChapterTitle(aiContent)));
       if (!title) {
         // 未识别到 # 标题 / 第X章：根据正文首句智能生成标题
         title = smartTitleFromContent(aiContent);
