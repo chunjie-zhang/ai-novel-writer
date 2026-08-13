@@ -102,7 +102,12 @@
     </el-dialog>
 
     <!-- 设置对话框 -->
-    <el-dialog v-model="showSettings" title="设置" width="620px">
+    <el-dialog
+      v-model="showSettings"
+      title="设置"
+      width="620px"
+      class="settings-dialog"
+    >
       <el-tabs>
         <el-tab-pane label="模型配置">
           <ModelConfig @saved="showSettings = false" />

@@ -4,6 +4,75 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use chrono::Local;
 
+/// 应用数据根目录（统一存放 AI 配置 / 技能 / 参考小说 / 项目等所有本地数据）
+///
+/// macOS 坑：Tauri 默认 app_data_dir = ~/Library/Application Support/{identifier}，
+/// 而 identifier = `com.ai-novel-writer.app` 以 `.app` 结尾，导致数据目录也被命名为
+/// `com.ai-novel-writer.app`，macOS 会把它误判为应用程序包：
+///   - `open <dir>` 报 "executable is missing"
+///   - 双击/Gatekeeper 报 "已损坏或不完整"
+/// 因此这里统一去掉目录名末尾的 `.app`，使用不以 `.app` 结尾的稳定路径。
+pub fn app_data_root(app_handle: &tauri::AppHandle) -> PathBuf {
+    let dir = app_handle
+        .path()
+        .app_data_dir()
+        .unwrap_or_else(|_| PathBuf::from("."));
+    if let Some(name) = dir.file_name().and_then(|n| n.to_str()) {
+        let lower = name.to_lowercase();
+        if lower.ends_with(".app") {
+            return dir.with_file_name(&name[..name.len() - 4]);
+        }
+    }
+    dir
+}
+
+/// 一次性迁移：把旧数据目录（`xxx.app`，被 macOS 误判为应用包）的内容复制到新目录。
+/// 只有所有项都复制成功才删除旧目录；任何一项失败则保留旧目录并打印警告，防止数据丢失。
+pub fn migrate_legacy_data_dir(app_handle: &tauri::AppHandle) {
+    let legacy = app_handle
+        .path()
+        .app_data_dir()
+        .unwrap_or_else(|_| PathBuf::from("."));
+    let new_dir = app_data_root(app_handle);
+    if legacy == new_dir || !legacy.exists() {
+        return;
+    }
+    let mut all_ok = true;
+    if let Ok(entries) = fs::read_dir(&legacy) {
+        for entry in entries.flatten() {
+            let target = new_dir.join(entry.file_name());
+            if target.exists() {
+                continue;
+            }
+            let src = entry.path();
+            let res: Result<(), String> = if src.is_dir() {
+                copy_dir_recursive(&src, &target)
+            } else {
+                fs::copy(&src, &target)
+                    .map(|_| ())
+                    .map_err(|e| e.to_string())
+            };
+            if let Err(e) = res {
+                all_ok = false;
+                eprintln!(
+                    "[migrate] 复制失败 {} -> {}: {}",
+                    src.display(),
+                    target.display(),
+                    e
+                );
+            }
+        }
+    }
+    if all_ok {
+        let _ = fs::remove_dir_all(&legacy);
+    } else {
+        eprintln!(
+            "[migrate] 数据迁移不完整，保留旧目录 {} 以防丢失",
+            legacy.display()
+        );
+    }
+}
+
 /// 全局配置（存储在 app_data_dir 根目录）
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -19,8 +88,7 @@ impl Default for AppConfig {
 }
 
 fn get_config_path(app_handle: &tauri::AppHandle) -> PathBuf {
-    app_handle.path().app_data_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
+    app_data_root(app_handle)
         .join("app-config.json")
 }
 
@@ -56,17 +124,14 @@ pub fn get_projects_dir(app_handle: &tauri::AppHandle) -> PathBuf {
         }
     }
     // 默认路径
-    app_handle.path().app_data_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("projects")
+    app_data_root(app_handle).join("projects")
 }
 
 // ===== 项目注册表（支持每个项目自定义存储位置） =====
 
 /// 注册表文件路径（记录每个项目实际存放目录）
 fn get_registry_path(app_handle: &tauri::AppHandle) -> PathBuf {
-    app_handle.path().app_data_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
+    app_data_root(app_handle)
         .join("project-registry.json")
 }
 
@@ -124,8 +189,7 @@ pub fn get_project_dir(app_handle: &tauri::AppHandle, project_id: &str) -> PathB
 /// 相比 WebView localStorage 更可靠，不怕清缓存/换环境丢失
 #[tauri::command]
 pub fn save_ai_config(app_handle: tauri::AppHandle, config: serde_json::Value) -> Result<(), String> {
-    let path = app_handle.path().app_data_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
+    let path = app_data_root(&app_handle)
         .join("ai-config.json");
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| format!("创建目录失败: {}", e))?;
@@ -139,8 +203,7 @@ pub fn save_ai_config(app_handle: tauri::AppHandle, config: serde_json::Value) -
 /// 加载 AI 配置（从磁盘）
 #[tauri::command]
 pub fn load_ai_config(app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    let path = app_handle.path().app_data_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
+    let path = app_data_root(&app_handle)
         .join("ai-config.json");
     if !path.exists() {
         return Ok(serde_json::Value::Null);
@@ -154,9 +217,7 @@ pub fn load_ai_config(app_handle: tauri::AppHandle) -> Result<serde_json::Value,
 
 /// 参考小说数据存储目录（每个参考小说一个 JSON 文件）
 fn get_reference_dir(app_handle: &tauri::AppHandle) -> PathBuf {
-    app_handle.path().app_data_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("reference")
+    app_data_root(app_handle).join("reference")
 }
 
 // ===== 应用数据目录（统一入口：AI 配置 / 自定义技能 / 参考小说 / 项目都在此） =====
@@ -170,8 +231,7 @@ fn get_reference_dir(app_handle: &tauri::AppHandle) -> PathBuf {
 ///   skills/               自定义技能
 ///   reference/            参考小说分析数据
 fn get_app_data_dir(app_handle: &tauri::AppHandle) -> PathBuf {
-    app_handle.path().app_data_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
+    app_data_root(app_handle)
 }
 
 /// 获取应用数据根目录路径（供前端展示"集中管理"位置）
@@ -183,21 +243,32 @@ pub fn get_data_dir_path(app_handle: tauri::AppHandle) -> Result<String, String>
 }
 
 /// 用系统文件管理器打开应用数据根目录（macOS Finder / Windows 资源管理器 / Linux 文件管理器）
+///
+/// 注意：macOS 下 app_data_dir 目录名以 `.app` 结尾（如 com.ai-novel-writer.app），
+/// 直接 `open <dir>` 会被当成应用包启动而失败（"executable is missing"），
+/// 必须显式用 `open -a Finder <dir>` 打开。
 #[tauri::command]
 pub fn open_data_dir(app_handle: tauri::AppHandle) -> Result<(), String> {
     let dir = get_app_data_dir(&app_handle);
     fs::create_dir_all(&dir).map_err(|e| format!("创建数据目录失败: {}", e))?;
     let dir_str = dir.to_string_lossy().to_string();
     #[cfg(target_os = "macos")]
-    let status = std::process::Command::new("open").arg(&dir_str).status();
+    let status = std::process::Command::new("open")
+        .arg("-a")
+        .arg("Finder")
+        .arg(&dir_str)
+        .status();
     #[cfg(target_os = "windows")]
     let status = std::process::Command::new("explorer").arg(&dir_str).status();
     #[cfg(all(unix, not(target_os = "macos")))]
     let status = std::process::Command::new("xdg-open").arg(&dir_str).status();
     #[cfg(not(any(unix, target_os = "windows")))]
     let status = Err(std::io::Error::new(std::io::ErrorKind::Other, "unsupported platform"));
-    status.map_err(|e| format!("打开数据目录失败: {}", e))?;
-    Ok(())
+    match status {
+        Ok(s) if s.success() => Ok(()),
+        Ok(s) => Err(format!("打开数据目录失败 (退出码 {})", s.code().unwrap_or(-1))),
+        Err(e) => Err(format!("打开数据目录失败: {}", e)),
+    }
 }
 
 /// 参考小说 id → 安全文件名

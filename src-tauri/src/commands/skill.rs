@@ -10,15 +10,13 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
+
+use super::config::app_data_root;
 
 /// 技能根目录：{app_data_dir}/skills
 fn get_skills_dir(app_handle: &AppHandle) -> PathBuf {
-    app_handle
-        .path()
-        .app_data_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("skills")
+    app_data_root(app_handle).join("skills")
 }
 
 /// 技能条目：目录名 + SKILL.md 内容 + 资源文件列表

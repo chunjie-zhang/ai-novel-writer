@@ -6,6 +6,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .setup(|app| {
+            // 迁移旧数据目录（macOS 下旧目录以 .app 结尾会被误判为应用包）
+            commands::config::migrate_legacy_data_dir(&app.handle());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::create_project,
             commands::list_projects,

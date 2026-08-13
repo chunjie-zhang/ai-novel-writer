@@ -54,8 +54,9 @@ async function handleOpenDataDir() {
   if (!dataDirPath.value) return;
   try {
     await invoke("open_data_dir");
+    ElMessage.success("已在文件夹中打开应用数据目录");
   } catch (e) {
-    ElMessage.error("打开数据目录失败");
+    ElMessage.error("打开数据目录失败，请手动前往：" + dataDirPath.value);
   }
 }
 </script>
