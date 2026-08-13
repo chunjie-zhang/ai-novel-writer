@@ -206,7 +206,8 @@ fn collect_chapters(dir: &std::path::Path, group: &str, chapters: &mut Vec<Chapt
                 file_name: rel,
                 group: group.to_string(),
                 order: chapters.len() as u32 + 1,
-                word_count: content.len() as u32,
+                // 字数按字符数统计（中文一字=一字符；content.len() 是 UTF-8 字节数，会偏大 3 倍）
+                word_count: content.chars().count() as u32,
                 created_at: "".to_string(),
                 updated_at: "".to_string(),
             });
