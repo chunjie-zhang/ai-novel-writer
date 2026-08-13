@@ -50,6 +50,8 @@ export const useAIStore = defineStore("ai", () => {
   const isGenerating = ref(false);
   /** 当前流式输出的草稿（供中间编辑器实时预览打字机效果） */
   const streamingDraft = ref("");
+  /** 用户是否点击了停止（分批续写等循环需感知并中断） */
+  const stopRequested = ref(false);
   // 当前会话属于哪个项目（用于按小说保存/恢复聊天历史）
   const chatProjectId = ref<string | null>(null);
 
@@ -330,6 +332,7 @@ export const useAIStore = defineStore("ai", () => {
 
   /** 停止当前生成（点击「停止」按钮）：通知 Rust 中断流式，并手动结束挂起的 completion */
   function stopGeneration() {
+    stopRequested.value = true; // 让分批续写等循环感知并中断
     invoke("cancel_ai_stream").catch(() => {});
     if (activeResolve) {
       // 以当前已生成内容结束（正文已实时同步到 streamingDraft / 聊天）
@@ -390,6 +393,7 @@ export const useAIStore = defineStore("ai", () => {
     messages,
     isGenerating,
     streamingDraft,
+    stopRequested,
     chatProjectId,
     modelProvider,
     builtinVariant,
