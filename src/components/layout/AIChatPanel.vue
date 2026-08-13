@@ -572,7 +572,10 @@ async function handleSend() {
   // 目标字数：让 AI 控制生成篇幅在设定值附近（±10~15% 浮动）
   // 记住生成前 maxTokens，生成后恢复，避免字数限制污染后续会话
   const savedMaxTokens = aiStore.maxTokens;
-  if (aiStore.targetWordCount && aiStore.targetWordCount > 0) {
+  // 多章节意图：用户要求"续写N章/写N章/接下来N章"（N≥2）时，按章输出，不再限制总字数（否则会被压成 1 章）
+  // 允许"续写"与"章"之间有词语（如"续写接下来的20章"）；"一章/1章"仍视为单章
+  const wantsMultiChapter = /(?:[2-9]\d*|[二三四五六七八九十百千万两]+)\s*(章|章节)/.test(text);
+  if (!wantsMultiChapter && aiStore.targetWordCount && aiStore.targetWordCount > 0) {
     const n = aiStore.targetWordCount;
     const low = Math.round(n * 0.85);
     const high = Math.round(n * 1.15);
@@ -580,6 +583,9 @@ async function handleSend() {
     // 物理限制输出长度：目标字数 × 1.8 作为 token 上限（中文约 1 字 ≈ 1.3~1.5 token），
     // 与既有上限取更小值，确保 AI 无法生成远超目标的内容
     aiStore.maxTokens = Math.min(aiStore.maxTokens, Math.ceil(n * 1.8));
+  } else if (wantsMultiChapter) {
+    // 多章节续写：提示 AI 按章节逐个输出，每章相对独立
+    systemPrompt = `${systemPrompt}\n\n【多章节续写要求】\n本次请按用户要求的章节数量逐章输出，每个章节用 Markdown 一级标题「# 章节标题」开头，章节之间用空行分隔。不要把所有章节挤成一大段，也不要只写一章就收尾。`;
   }
 
   aiStore.systemPrompt = systemPrompt;
@@ -592,13 +598,19 @@ async function handleSend() {
     await autoSaveToChapter();
   }
 
-  // ===== 人设校验（AI 生成后自动检测 OOC） =====
+  // ===== 人设校验（后台静默执行，不打断主流程、不污染聊天记录） =====
   if (writingStore.characterProfiles) {
     const lastAssistantMsg = [...aiStore.messages].reverse().find(m => m.role === "assistant");
     if (lastAssistantMsg) {
       try {
-        const oocResult = await aiStore.sendMessage(
-          writingStore.buildOOCPrompt(lastAssistantMsg.content.slice(0, 3000))
+        const oocPrompt = writingStore.buildOOCPrompt(lastAssistantMsg.content.slice(0, 3000));
+        // 用静默调用：不写聊天记录、不触发流式预览，避免【人设校验】消息刷屏和覆盖中间编辑器
+        const oocResult = await aiStore.silentCall(
+          [
+            { role: "system", content: "你是一位严谨的人设一致性审查员，只输出客观检查结果。" },
+            { role: "user", content: oocPrompt },
+          ],
+          { temperature: 0.2, maxTokens: 1024 }
         );
         if (oocResult && oocResult.length > 20) {
           showOOCResult.value = oocResult;
@@ -617,6 +629,88 @@ const showChapterDialog = ref(false);
 const pendingChapterMsg = ref<any>(null);
 const chapterForm = reactive({ title: "", group: "" });
 
+/**
+ * 将 AI 回复按章节标题拆分为多个章节块。
+ * 识别「# 标题」与独立行的「第X章 / 第X节」作为章节边界。
+ * 仅当有 ≥2 个带正文的章节块时才算多章节。
+ */
+function splitChapters(content: string): { title: string; body: string }[] {
+  const lines = content.split("\n");
+  const chapters: { title: string; body: string }[] = [];
+  let cur: { title: string; body: string[] } | null = null;
+  const headingOf = (line: string): string | null => {
+    const t = line.trim();
+    if (!t) return null;
+    // Markdown 标题：# xxx
+    const md = t.match(/^#{1,6}\s+(.+)$/);
+    if (md) return md[1].trim();
+    // 独立行的「第X章 / 第X节」（短标题）
+    if (/^第[\d一二三四五六七八九十百千零]+[章节][^\n]{0,50}$/.test(t)) {
+      return t;
+    }
+    return null;
+  };
+  for (const line of lines) {
+    const heading = headingOf(line);
+    if (heading) {
+      if (cur) chapters.push({ title: cur.title, body: cur.body.join("\n") });
+      cur = { title: heading, body: [] };
+    } else if (cur) {
+      cur.body.push(line);
+    }
+  }
+  if (cur) chapters.push({ title: cur.title, body: cur.body.join("\n") });
+  // 过滤掉没有正文的章节（如仅标题）
+  return chapters
+    .map((c) => ({ title: c.title, body: c.body.trim() }))
+    .filter((c) => c.body.length > 0);
+}
+
+/** 多章节批量保存：把拆分出的多个章节分别新建为独立章节 */
+async function saveMultipleChapters(projectId: string, chapters: { title: string; body: string }[]) {
+  const existing = new Set(projectStore.chapters.map((c) => c.title));
+  const savedTitles: string[] = [];
+  for (const ch of chapters) {
+    let title = normalizeChapterTitle(ch.title);
+    if (!title) title = smartTitleFromContent(ch.body);
+    if (!title) title = `AI生成_${Date.now()}`;
+    let base = title;
+    let n = 2;
+    while (existing.has(title)) {
+      title = `${base}_${n}`;
+      n++;
+    }
+    existing.add(title);
+    await invoke("save_chapter", {
+      projectId,
+      chapterTitle: title,
+      group: "",
+      content: ch.body,
+    });
+    savedTitles.push(title);
+  }
+  await projectStore.openProject(projectId);
+
+  // 在中间编辑器打开最后一个章节
+  const lastTitle = savedTitles[savedTitles.length - 1];
+  const last = projectStore.chapters.find((c) => c.title === lastTitle);
+  if (last) {
+    const c = await invoke<string>("read_chapter", {
+      projectId,
+      fileName: last.file_name,
+    });
+    await editorStore.openChapterWithMemory(last, c, projectId);
+  }
+  // 右侧聊天不再展示完整章节，替换为简短提示
+  aiStore.replaceLastAssistant(
+    `📖 已拆分为 ${savedTitles.length} 个章节保存：${savedTitles.join("、")}`
+  );
+  ElMessage.success(`已将内容拆分为 ${savedTitles.length} 个章节保存`);
+
+  // 自动回填小说元信息（大纲/世界观/小说信息/角色/题材模板）
+  await autoFillNovelMeta(projectId);
+}
+
 /** 仿写/续写生成后：把最后一条 AI 回复写入目标章节，并在中间编辑器展示 */
 async function autoSaveToChapter() {
   const projectId = outputProjectId.value;
@@ -628,6 +722,13 @@ async function autoSaveToChapter() {
   if (!aiContent || aiContent.length < 50) return; // 过短不自动存，避免空/占位内容
 
   try {
+    // ===== 多章节拆分：若 AI 回复含多个「# 标题 / 第X章」块，逐个新建保存 =====
+    const multi = splitChapters(aiContent);
+    if (multi.length >= 2) {
+      await saveMultipleChapters(projectId, multi);
+      return;
+    }
+
     const target = outputChapterId.value;
     const isNew = target === "__NEW__" || !target;
 

@@ -324,9 +324,46 @@ function getChapterGroups(projectId: string) {
   return groups;
 }
 
-/** 某个分组下的章节 */
+/** 某个分组下的章节（按章节序号「第N章/第N节」排序，无序号则按 order 兜底） */
 function getGroupChapters(projectId: string, group: string) {
-  return getChapters(projectId).filter((c) => (c.group || "") === group);
+  return getChapters(projectId)
+    .filter((c) => (c.group || "") === group)
+    .sort((a, b) => chapterSortNum(a) - chapterSortNum(b));
+}
+
+/** 中文数字 → 阿拉伯数字（支持"一~九、十、百、千、两"，含"二十三""一百零五"等） */
+function chineseToArabic(s: string): number {
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  const digit: Record<string, number> = { "零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9 };
+  const unit: Record<string, number> = { "十": 10, "百": 100, "千": 1000, "万": 10000 };
+  let total = 0;
+  let section = 0;
+  let num = 0;
+  for (const ch of s) {
+    if (ch in digit) {
+      num = digit[ch];
+    } else if (ch in unit) {
+      const u = unit[ch];
+      const v = (num || 1) * u;
+      section += v;
+      num = 0;
+      if (u >= 10000) {
+        total += section;
+        section = 0;
+      }
+    }
+  }
+  return total + section + num;
+}
+
+/** 章节排序键：提取标题中的「第N章/第N节/第N篇」数字；提取不到则用 order 或排最后 */
+function chapterSortNum(c: any): number {
+  const m = String(c.title || "").match(/第\s*([0-9一二三四五六七八九十百千零两]+)\s*[章节篇回]/);
+  if (m) {
+    const n = chineseToArabic(m[1].trim());
+    if (!isNaN(n)) return n;
+  }
+  return typeof c.order === "number" ? c.order : Number.MAX_SAFE_INTEGER;
 }
 
 /** 确保打开指定项目 */

@@ -344,6 +344,25 @@ export const useAIStore = defineStore("ai", () => {
     return result.content;
   }
 
+  /**
+   * 静默调用 AI（非流式）：不写入聊天记录、不更新流式草稿、不触发中间编辑器预览。
+   * 用于人设校验等后台任务，避免打断/污染主流程。
+   */
+  async function silentCall(
+    messages: ChatMessage[],
+    opts: { temperature?: number; maxTokens?: number } = {}
+  ): Promise<string> {
+    const result = await invoke<AIResponse>("call_ai", {
+      baseUrl: resolvedBaseUrl.value,
+      apiKey: resolvedApiKey.value,
+      model: resolvedModelName.value,
+      messages,
+      temperature: opts.temperature ?? temperature.value,
+      maxTokens: opts.maxTokens ?? resolvedMaxTokens.value,
+    });
+    return result.content;
+  }
+
   return {
     messages,
     isGenerating,
@@ -375,5 +394,6 @@ export const useAIStore = defineStore("ai", () => {
     saveMemory,
     listMemories,
     testConnection,
+    silentCall,
   };
 });

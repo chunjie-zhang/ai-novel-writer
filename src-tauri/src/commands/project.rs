@@ -171,10 +171,17 @@ pub fn list_projects(app_handle: tauri::AppHandle) -> Result<Vec<NovelProject>, 
 /// 递归收集章节目录下的所有 .md 章节（支持子文件夹分组）
 /// group 为相对 chapters/ 的子目录路径，空表示根目录
 fn collect_chapters(dir: &std::path::Path, group: &str, chapters: &mut Vec<ChapterInfo>) -> Result<(), String> {
-    let entries = fs::read_dir(dir)
+    let mut entries: Vec<_> = fs::read_dir(dir)
+        .map_err(|e| format!("读取章节目录失败: {}", e))?
+        .collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("读取章节目录失败: {}", e))?;
+    // 按文件名排序（"第1章.md" < "第2章.md" < ...），保证 order 与展示顺序稳定一致
+    entries.sort_by(|a, b| {
+        let na = a.file_name().to_string_lossy().to_string();
+        let nb = b.file_name().to_string_lossy().to_string();
+        na.cmp(&nb)
+    });
     for entry in entries {
-        let entry = entry.map_err(|e| format!("读取目录项失败: {}", e))?;
         let path = entry.path();
         if path.is_dir() {
             let sub = entry.file_name().to_string_lossy().to_string();
