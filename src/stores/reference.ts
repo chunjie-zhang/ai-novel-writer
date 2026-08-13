@@ -43,11 +43,37 @@ export const useReferenceStore = defineStore("reference", () => {
     writingMode.value ? WRITING_MODES[writingMode.value] : null
   );
 
-  /** 用于 system prompt 的小说上下文摘要 */
+  /** 用于 system prompt 的小说上下文摘要（含原著大纲与剧情节选，供续写对齐） */
   const referenceContext = computed(() => {
     if (!referenceNovel.value) return "";
     let ctx = `【参考小说：${referenceNovel.value.title}】\n`;
     ctx += `总字数：${referenceNovel.value.total_words}字，共${referenceNovel.value.total_chapters}章\n`;
+
+    // 原著章节大纲（标题序列 → 剧情走向，供大纲对齐）
+    if (chapters.value.length > 0) {
+      ctx += `\n原著章节大纲（按章节顺序，这是剧情的推进走向，续写/仿写必须与此对齐）：\n`;
+      chapters.value.slice(0, 40).forEach((c, i) => {
+        ctx += `${i + 1}. ${c.title}\n`;
+      });
+      if (chapters.value.length > 40) {
+        ctx += `...（共${chapters.value.length}章，后续章节略）\n`;
+      }
+    }
+
+    // 开头几章内容节选（文风 + 剧情参照）
+    if (chapters.value.length > 0) {
+      ctx += `\n原著开头节选（用于对齐文风、人物与剧情）：\n`;
+      for (const c of chapters.value.slice(0, 2)) {
+        ctx += `【${c.title}】\n${c.content.slice(0, 800)}\n`;
+      }
+    }
+
+    // 结尾章节节选（续写衔接点：剧情进展到哪，就从哪续写）
+    if (chapters.value.length > 2) {
+      const last = chapters.value[chapters.value.length - 1];
+      ctx += `\n原著结尾节选（当前剧情进展到此处，续写需从这里自然衔接）：\n`;
+      ctx += `【${last.title}】\n${last.content.slice(0, 800)}\n`;
+    }
 
     if (analysis.value) {
       ctx += `\n风格摘要：${analysis.value.style_summary}\n`;
