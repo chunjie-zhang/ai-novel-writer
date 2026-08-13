@@ -1248,19 +1248,19 @@ async function autoFillNovelMeta(projectId: string) {
     }
     if (!result) throw lastError || new Error("生成小说元信息失败");
 
-    // 1. 回填小说信息（书名/题材/简介）
-    const name = result.book_name || projectMeta?.name || "未命名小说";
+    // 1. 回填小说信息（书名/题材/简介）——书名优先保留用户已有标题，不被 AI 生成的书名覆盖
+    const name = projectMeta?.name || result.book_name || "未命名小说";
     await projectStore.updateProjectInfo(projectId, {
       name,
       genre: result.genre || "",
       description: result.description || "",
     });
 
-    // 2. 回填大纲
+    // 2. 回填大纲（标题用现有书名，避免覆盖）
     const outline = result.outline;
     if (outline) {
       const oStore = useOutlineStore();
-      oStore.initOutline(outline.title || name);
+      oStore.initOutline(name);
       if (Array.isArray(outline.volumes) && outline.volumes.length > 0) {
         // 清空默认卷，改用 AI 生成的分卷
         oStore.outline!.children = [];
