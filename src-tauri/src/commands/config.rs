@@ -150,6 +150,72 @@ pub fn load_ai_config(app_handle: tauri::AppHandle) -> Result<serde_json::Value,
     serde_json::from_str(&content).map_err(|e| format!("解析配置失败: {}", e))
 }
 
+// ===== 参考小说分析数据（本地文件存储，专门目录 app_data_dir/reference） =====
+
+/// 参考小说数据存储目录（每个参考小说一个 JSON 文件）
+fn get_reference_dir(app_handle: &tauri::AppHandle) -> PathBuf {
+    app_handle.path().app_data_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join("reference")
+}
+
+/// 参考小说 id → 安全文件名
+fn reference_file_name(id: &str) -> String {
+    format!("{}.json", id.replace(['/', '\\', ':'], "_"))
+}
+
+/// 保存参考小说分析数据到磁盘（reference/{id}.json，按小说 id 分文件）
+#[tauri::command]
+pub fn save_reference_state(
+    app_handle: tauri::AppHandle,
+    id: String,
+    data: serde_json::Value,
+) -> Result<(), String> {
+    let dir = get_reference_dir(&app_handle);
+    fs::create_dir_all(&dir).map_err(|e| format!("创建参考小说目录失败: {}", e))?;
+    let path = dir.join(reference_file_name(&id));
+    let json = serde_json::to_string_pretty(&data)
+        .map_err(|e| format!("序列化参考小说失败: {}", e))?;
+    fs::write(&path, json).map_err(|e| format!("保存参考小说失败: {}", e))?;
+    Ok(())
+}
+
+/// 读取所有参考小说分析数据（按 savedAt 倒序，最近的在前）
+#[tauri::command]
+pub fn load_reference_states(app_handle: tauri::AppHandle) -> Result<Vec<serde_json::Value>, String> {
+    let dir = get_reference_dir(&app_handle);
+    if !dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut states: Vec<serde_json::Value> = vec![];
+    for entry in fs::read_dir(&dir).map_err(|e| format!("读取参考小说目录失败: {}", e))? {
+        let entry = entry.map_err(|e| format!("读取目录项失败: {}", e))?;
+        if entry.path().extension().map_or(false, |ext| ext == "json") {
+            if let Ok(content) = fs::read_to_string(entry.path()) {
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
+                    states.push(v);
+                }
+            }
+        }
+    }
+    states.sort_by(|a, b| {
+        let ta = a["savedAt"].as_i64().unwrap_or(0);
+        let tb = b["savedAt"].as_i64().unwrap_or(0);
+        tb.cmp(&ta)
+    });
+    Ok(states)
+}
+
+/// 删除一个参考小说的数据文件（用户移除参考小说时调用）
+#[tauri::command]
+pub fn delete_reference_state(app_handle: tauri::AppHandle, id: String) -> Result<(), String> {
+    let path = get_reference_dir(&app_handle).join(reference_file_name(&id));
+    if path.exists() {
+        fs::remove_file(&path).map_err(|e| format!("删除参考小说失败: {}", e))?;
+    }
+    Ok(())
+}
+
 /// 获取当前存储路径
 #[tauri::command]
 pub fn get_storage_path(app_handle: tauri::AppHandle) -> Result<String, String> {

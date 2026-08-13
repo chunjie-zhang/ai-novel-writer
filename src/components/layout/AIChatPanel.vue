@@ -1710,6 +1710,11 @@ function onDocClick(e: MouseEvent) {
 }
 onMounted(() => document.addEventListener("mousedown", onDocClick));
 onBeforeUnmount(() => document.removeEventListener("mousedown", onDocClick));
+
+// 挂载时从本地文件（app_data_dir/reference）恢复最近的分析数据（刷新/重启后保留参考小说与 skill）
+onMounted(() => {
+  refStore.initFromStorage();
+});
 </script>
 
 <style scoped>

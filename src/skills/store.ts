@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { BUILTIN_SKILLS } from "./definitions";
 import type { WritingSkill, SkillCategory } from "./types";
@@ -10,10 +10,25 @@ import {
   skillDirName,
 } from "@/utils/skillMarkdown";
 
+/** 已选技能持久化 key（刷新/重启后恢复） */
+const ACTIVE_SKILLS_KEY = "novel-active-skill-ids";
+
+function loadActiveSkillIds(): string[] {
+  try {
+    const raw = localStorage.getItem(ACTIVE_SKILLS_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : [];
+  } catch (e) {
+    console.error("加载已选技能失败:", e);
+    return [];
+  }
+}
+
 export const useSkillStore = defineStore("skill", () => {
   // ===== 状态 =====
-  /** 当前选中的技能（支持多个，@ 可连续添加） */
-  const activeSkillIds = ref<string[]>([]);
+  /** 当前选中的技能（支持多个，@ 可连续添加；从 localStorage 恢复） */
+  const activeSkillIds = ref<string[]>(loadActiveSkillIds());
   /** 用户启用的技能 ID 列表（null = 全部启用） */
   const enabledSkillIds = ref<Set<string> | null>(null);
   /** 搜索关键词 */
@@ -26,6 +41,19 @@ export const useSkillStore = defineStore("skill", () => {
   const isLoading = ref(false);
   /** 技能目录路径 */
   const skillsDir = ref("");
+
+  // ===== 自动持久化：已选技能变化时保存 =====
+  watch(
+    activeSkillIds,
+    (ids) => {
+      try {
+        localStorage.setItem(ACTIVE_SKILLS_KEY, JSON.stringify(ids));
+      } catch (e) {
+        console.error("保存已选技能失败:", e);
+      }
+    },
+    { deep: true }
+  );
 
   // ===== 计算属性 =====
   /** 官方内置技能 */
@@ -219,6 +247,10 @@ export const useSkillStore = defineStore("skill", () => {
     enabledSkillIds.value = null;
     searchQuery.value = "";
     activeCategory.value = null;
+    // 清空持久化的已选技能
+    try {
+      localStorage.removeItem(ACTIVE_SKILLS_KEY);
+    } catch { /* 忽略 */ }
   }
 
   return {

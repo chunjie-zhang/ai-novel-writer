@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   ReferenceNovel,
@@ -27,7 +27,7 @@ interface RawImportedNovel {
 }
 
 export const useReferenceStore = defineStore("reference", () => {
-  // ===== 状态 =====
+  // ===== 状态（初始为空，initFromStorage 从本地文件异步恢复） =====
   const referenceNovel = ref<ReferenceNovel | null>(null);
   const chapters = ref<ReferenceChapter[]>([]);
   const analysis = ref<NovelAnalysis | null>(null);
@@ -35,6 +35,49 @@ export const useReferenceStore = defineStore("reference", () => {
   const selectedChapters = ref<number[]>([]);
   const isLoading = ref(false);
   const isAnalyzing = ref(false);
+
+  // ===== 本地文件自动持久化（Rust 写 app_data_dir/reference/{id}.json；防抖避免频繁写入） =====
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  watch(
+    [referenceNovel, chapters, analysis, writingMode, selectedChapters],
+    () => {
+      const novel = referenceNovel.value;
+      if (!novel) return; // 无参考小说不保存
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        invoke("save_reference_state", {
+          id: novel.id,
+          data: {
+            id: novel.id,
+            title: novel.title,
+            referenceNovel: novel,
+            chapters: chapters.value,
+            analysis: analysis.value,
+            writingMode: writingMode.value,
+            selectedChapters: selectedChapters.value,
+            savedAt: Date.now(),
+          },
+        }).catch((e) => console.error("保存参考小说失败:", e));
+      }, 400);
+    },
+    { deep: true }
+  );
+
+  /** 从本地文件恢复最近保存的参考小说（刷新/重启后调用） */
+  async function initFromStorage() {
+    try {
+      const records = await invoke<any[]>("load_reference_states");
+      if (!Array.isArray(records) || records.length === 0) return;
+      const latest = records[0]; // 已按 savedAt 倒序
+      referenceNovel.value = latest.referenceNovel || null;
+      chapters.value = latest.chapters || [];
+      analysis.value = latest.analysis || null;
+      writingMode.value = latest.writingMode || null;
+      selectedChapters.value = latest.selectedChapters || [];
+    } catch (e) {
+      console.error("恢复参考小说失败:", e);
+    }
+  }
 
   // ===== 计算属性 =====
   const hasReference = computed(() => referenceNovel.value !== null);
@@ -289,13 +332,19 @@ ${ctx}
     return modePrompts[mode] || modePrompts.analyze;
   }
 
-  /** 清除参考小说 */
+  /** 清除参考小说（同时删除本地文件中该小说的数据，避免残留） */
   function clear() {
+    const id = referenceNovel.value?.id;
     referenceNovel.value = null;
     chapters.value = [];
     analysis.value = null;
     writingMode.value = null;
     selectedChapters.value = [];
+    if (id) {
+      invoke("delete_reference_state", { id }).catch((e) =>
+        console.error("删除参考小说失败:", e)
+      );
+    }
   }
 
   return {
@@ -312,6 +361,7 @@ ${ctx}
     referenceContext,
     importFile,
     analyzeNovel,
+    initFromStorage,
     setWritingMode,
     getModeSystemPrompt,
     clear,
