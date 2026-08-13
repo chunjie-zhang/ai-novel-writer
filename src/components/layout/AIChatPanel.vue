@@ -192,6 +192,17 @@
             <span class="dot"></span>
             <span class="dot"></span>
           </div>
+          <!-- 分批续写实时进度 -->
+          <div v-if="multiProgress.visible" class="multi-progress">
+            <div class="mp-bar">
+              <div class="mp-bar-inner" :style="{ width: multiProgress.percent + '%' }"></div>
+            </div>
+            <div class="mp-text">
+              <span v-if="multiProgress.lastDoneText" class="mp-done">{{ multiProgress.lastDoneText }}</span>
+              <span v-if="multiProgress.statusText" class="mp-current">{{ multiProgress.statusText }}</span>
+              <span class="mp-count">{{ multiProgress.written }}/{{ multiProgress.total }} 章</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -379,6 +390,18 @@ const showOOCDialog = ref(false);
 const showOOCResult = ref("");
 const oocSummary = ref("");
 const messagesRef = ref<HTMLElement | null>(null);
+
+// ===== 分批续写实时进度 =====
+const multiProgress = ref({
+  visible: false,
+  total: 0,
+  written: 0,
+  percent: 0,
+  /** 上一批完成提示，如「✅ 第 1-3 章续写完毕」 */
+  lastDoneText: "",
+  /** 当前状态，如「正在续写第 4-6 章…」 */
+  statusText: "",
+});
 
 // ===== 输出目标小说 =====
 /** AI 生成内容要写入的目标小说 ID */
@@ -753,6 +776,15 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
   }
   const ai = useAIStore();
   ai.isGenerating = true; // 让右侧按钮变「停止」，生成中可点击中断
+  // 初始化实时进度
+  multiProgress.value = {
+    visible: true,
+    total: totalChapters,
+    written: 0,
+    percent: 0,
+    lastDoneText: "",
+    statusText: `准备续写 ${totalChapters} 章…`,
+  };
   try {
     const BATCH = 3; // 每批 3 章（约 4000-5000 字，安全在单次输出上限内）
     // 起始章号 = 目标小说已有章节的最大编号 + 1（无则从 1 开始），避免从第 1 章重写
@@ -788,6 +820,10 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
       const remaining = totalChapters - written;
       const batch = Math.min(BATCH, remaining);
       const currentStart = startChapter + written; // 本批起始章号
+      const currentEnd = currentStart + batch - 1; // 本批结束章号
+
+      // 更新进度：当前正在续写的批次
+      multiProgress.value.statusText = `正在续写第 ${currentStart}-${currentEnd} 章…`;
 
       // 本批提示：从第 currentStart 章开始，衔接上一章结尾
       let prompt = `【批量续写任务】\n${originalText}\n\n请从第 ${currentStart} 章开始，续写接下来的 ${batch} 章（章节编号从 ${currentStart} 顺延，不要重新从第 1 章开始）。`;
@@ -829,6 +865,17 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
       const savedTitlesBatch = await saveMultipleChapters(projectId, chunks, { skipAutoFill: true, skipReplaceAssistant: true });
       for (const t of savedTitlesBatch) savedTitles.push(t);
       written += savedTitlesBatch.length;
+      // 更新进度：本批完成 + 提示下一批
+      multiProgress.value.written = written;
+      multiProgress.value.percent = Math.min(100, Math.round((written / totalChapters) * 100));
+      multiProgress.value.lastDoneText = `✅ 第 ${currentStart}-${currentEnd} 章续写完毕`;
+      if (written < totalChapters) {
+        const nextStart = currentEnd + 1;
+        const nextEnd = Math.min(startChapter + totalChapters - 1, nextStart + batch - 1);
+        multiProgress.value.statusText = `接下来续写第 ${nextStart}-${nextEnd} 章…`;
+      } else {
+        multiProgress.value.statusText = "全部续写完成";
+      }
       ElMessage.success(`已续写 ${written}/${totalChapters} 章`);
     }
 
@@ -854,6 +901,10 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
     }
   } finally {
     ai.isGenerating = false;
+    // 延迟隐藏进度区，让用户看到最终完成状态
+    setTimeout(() => {
+      multiProgress.value.visible = false;
+    }, 1500);
   }
 }
 
@@ -1817,6 +1868,47 @@ onBeforeUnmount(() => document.removeEventListener("mousedown", onDocClick));
 @keyframes bounce {
   0%, 80%, 100% { transform: scale(0); }
   40% { transform: scale(1); }
+}
+
+/* 分批续写实时进度 */
+.multi-progress {
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 220px;
+}
+.mp-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.mp-bar-inner {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.mp-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.mp-done {
+  color: var(--success, #67c23a);
+}
+.mp-current {
+  color: var(--text-2);
+}
+.mp-count {
+  color: var(--accent);
+  font-weight: 600;
+  margin-top: 2px;
 }
 
 .chat-input-area {
