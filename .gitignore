@@ -3,6 +3,9 @@ node_modules
 /dist
 /dll
 /sdk/jdaispace-sdk/dist
+# Rust 编译产物（可能数 GB，禁止入库）
+/src-tauri/target
+/src-tauri/gen
 # demo 下的 jdaispace.sdk.js 由 build:sdk 从 dist 自动拷贝生成，不入库
 /sdk/jdaispace-sdk/demo/jdaispace.sdk.js
 yarn.lock
