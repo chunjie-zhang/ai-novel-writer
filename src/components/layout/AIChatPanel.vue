@@ -788,13 +788,9 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
   try {
     // 每章目标字数（全局配置，0=不限制）。分批续写也须遵守每章字数，否则每章只写 1000 字左右
     const targetPerChapter = aiStore.targetWordCount || 0;
-    // 每章约需 tokens（中文 1 字 ≈ 1.3~1.5 token，取 1.8 留余量）
-    const tokensPerChapter = targetPerChapter > 0 ? Math.ceil(targetPerChapter * 1.8) : 2600;
     const MAX_BATCH_TOKENS = 16000; // 单次输出安全上限
-    // 动态每批章数：保证每章达到目标字数（有字数限制时可能只能每批 1-2 章）
-    const BATCH = targetPerChapter > 0
-      ? Math.min(3, Math.max(1, Math.floor(MAX_BATCH_TOKENS / tokensPerChapter)))
-      : 3;
+    // 逐章续写：每批只生成 1 章（用户要求一章一章生成，避免多章合批导致每章字数幅度超标、字数不可控）
+    const BATCH = 1;
     // 起始章号 = 目标小说已有章节的最大编号 + 1（无则从 1 开始），避免从第 1 章重写
     const startChapter = Math.max(maxExistingChapterNum(), projectStore.chapters.length) + 1;
     // 已有章节标题（作为衔接上下文；只保留最后一章标题用于衔接）
@@ -802,7 +798,7 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
     const savedTitles: string[] = [...existingTitles];
     let written = 0;
     let guard = 0;
-    const MAX_BATCHES = 30; // 最多 30 批，防止异常死循环
+    const MAX_BATCHES = 100; // 最多 100 批（逐章时允许更多章），防止异常死循环
 
     // 读取已有章节最后一章结尾内容，作为续写衔接上下文（让暂停后再次续写能真正接上剧情）
     let existingTail = "";
@@ -830,11 +826,16 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
       const currentStart = startChapter + written; // 本批起始章号
       const currentEnd = currentStart + batch - 1; // 本批结束章号
 
-      // 更新进度：当前正在续写的批次
-      multiProgress.value.statusText = `正在续写第 ${currentStart}-${currentEnd} 章…`;
+      // 更新进度：当前正在续写的章节（逐章时显示单章号）
+      multiProgress.value.statusText = batch > 1
+        ? `正在续写第 ${currentStart}-${currentEnd} 章…`
+        : `正在续写第 ${currentStart} 章…`;
 
       // 本批提示：从第 currentStart 章开始，衔接上一章结尾
-      let prompt = `【批量续写任务】\n${originalText}\n\n请从第 ${currentStart} 章开始，续写接下来的 ${batch} 章（章节编号从 ${currentStart} 顺延，不要重新从第 1 章开始）。`;
+      const batchDesc = batch > 1
+        ? `续写接下来的 ${batch} 章`
+        : `续写本章（第 ${currentStart} 章）`;
+      let prompt = `【逐章续写任务】\n${originalText}\n\n请从第 ${currentStart} 章开始，${batchDesc}（章节编号从 ${currentStart} 顺延，不要重新从第 1 章开始）。`;
       if (written > 0) {
         const batchTitles = savedTitles.slice(existingTitles.length).join("、");
         prompt += `\n本批次已完成章节：${batchTitles}。请严格衔接上一章（第 ${currentStart - 1} 章【${savedTitles[savedTitles.length - 1]}】）的结尾剧情，保持人物、世界观、剧情连贯，章节编号顺延。`;
@@ -846,12 +847,12 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
           prompt += `\n【上一章结尾内容（严格据此衔接续写）】\n${existingTail}`;
         }
       }
-      prompt += `\n每章用 Markdown 一级标题「# 章节标题」开头，标题统一用「第N章 标题」且 N 用阿拉伯数字（如「第${currentStart}章 …」），不要用中文数字，不要用「第N卷」作为章节标题。章节之间用空行分隔，不要只写一章就收尾。`;
-      // 每章字数要求：让每章都达到目标字数，避免每章过短
+      prompt += `\n本章用 Markdown 一级标题「# 章节标题」开头，标题统一用「第N章 标题」且 N 用阿拉伯数字（如「第${currentStart}章 …」），不要用中文数字，不要用「第N卷」作为章节标题。`;
+      // 每章字数要求：单章生成时严格约束本章字数，避免幅度超标
       if (targetPerChapter > 0) {
         const low = Math.round(targetPerChapter * 0.85);
         const high = Math.round(targetPerChapter * 1.15);
-        prompt += `\n【每章字数要求（必须遵守）】本批共 ${batch} 章，**每一章**的正文汉字数都要控制在约 ${targetPerChapter} 字（合理范围 ${low}~${high} 字），不要每章只写 1000 字左右就收尾；每章内容要完整充实。`;
+        prompt += `\n【本章字数要求（必须遵守）】本章正文汉字数要控制在约 ${targetPerChapter} 字（合理范围 ${low}~${high} 字），不要只写 1000 字左右就收尾；内容要完整充实。`;
       }
 
       let content = "";
@@ -886,11 +887,15 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
       // 更新进度：本批完成 + 提示下一批
       multiProgress.value.written = written;
       multiProgress.value.percent = Math.min(100, Math.round((written / totalChapters) * 100));
-      multiProgress.value.lastDoneText = `✅ 第 ${currentStart}-${currentEnd} 章续写完毕`;
+      multiProgress.value.lastDoneText = batch > 1
+        ? `✅ 第 ${currentStart}-${currentEnd} 章续写完毕`
+        : `✅ 第 ${currentStart} 章续写完毕`;
       if (written < totalChapters) {
         const nextStart = currentEnd + 1;
         const nextEnd = Math.min(startChapter + totalChapters - 1, nextStart + batch - 1);
-        multiProgress.value.statusText = `接下来续写第 ${nextStart}-${nextEnd} 章…`;
+        multiProgress.value.statusText = batch > 1
+          ? `接下来续写第 ${nextStart}-${nextEnd} 章…`
+          : `接下来续写第 ${nextStart} 章…`;
       } else {
         multiProgress.value.statusText = "全部续写完成";
       }
