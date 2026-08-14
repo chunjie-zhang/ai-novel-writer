@@ -46,6 +46,8 @@ export const useEditorStore = defineStore("editor", () => {
   const cursorPosition = ref(0);
   const scrollPosition = ref(0);
   const lastMemory = ref<CursorMemory | null>(loadCursorMemory());
+  /** 当前章节所属项目（openChapterWithMemory 时记录，供断稿记忆按项目隔离） */
+  const currentProjectId = ref<string | null>(null);
 
   // 计算属性
   const isModified = computed(() => content.value !== lastSavedContent.value);
@@ -60,8 +62,9 @@ export const useEditorStore = defineStore("editor", () => {
     if (memoryTimer) clearTimeout(memoryTimer);
     memoryTimer = setTimeout(() => {
       if (currentChapter.value?.file_name) {
+        // 按项目隔离：记录当前小说 id，避免跨项目同名章节串记忆
         saveCursorMemory({
-          projectId: "",
+          projectId: currentProjectId.value || useProjectStore().currentProject?.id || "",
           chapterFileName: currentChapter.value.file_name,
           cursorPosition: cursorPosition.value,
           scrollPosition: scrollPosition.value,
@@ -90,6 +93,7 @@ export const useEditorStore = defineStore("editor", () => {
     projectId: string
   ) {
     currentChapter.value = chapter;
+    currentProjectId.value = projectId;
     // 打开时自动修复内容首行的脏标题（含路径 / .md），并写回磁盘持久修复
     const fixed = fixDirtyTitle(chapterContent);
     content.value = fixed;
@@ -108,9 +112,13 @@ export const useEditorStore = defineStore("editor", () => {
       }
     }
 
-    // 检查是否有断稿记忆
+    // 检查是否有断稿记忆（按项目 + 章节文件名匹配，避免跨项目同名串记忆）
     const mem = loadCursorMemory();
-    if (mem && mem.chapterFileName === chapter.file_name) {
+    if (
+      mem &&
+      mem.chapterFileName === chapter.file_name &&
+      (!mem.projectId || mem.projectId === projectId)
+    ) {
       cursorPosition.value = mem.cursorPosition;
       scrollPosition.value = mem.scrollPosition;
       // 保存 projectId

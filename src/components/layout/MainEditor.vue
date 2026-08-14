@@ -289,7 +289,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onBeforeUnmount } from "vue";
+import { ref, computed, watch, onBeforeUnmount } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { invoke } from "@tauri-apps/api/core";
 import { useProjectStore } from "@/stores/project";
@@ -417,8 +417,17 @@ function handleDailyClick() {
   showGoalDialog.value = true;
 }
 
-// ===== 断稿记忆恢复 =====
-watch(() => editorStore.currentChapter, async () => { await nextTick(); }, { once: true });
+// ===== 断稿记忆恢复：切换章节后应用光标 / 滚动位置（若有恢复记录） =====
+watch(() => editorStore.currentChapter, () => {
+  const pos = editorStore.cursorPosition;
+  const scroll = editorStore.scrollPosition;
+  if (pos > 0 || scroll > 0) {
+    // 等编辑器渲染就绪后再应用（applyCursorRestore 内部有 pending 兜底）
+    setTimeout(() => {
+      milkdownEditorRef.value?.applyCursorRestore?.(pos, scroll);
+    }, 200);
+  }
+});
 
 // 全局 Ctrl+S 保存
 function handleKeydown(e: KeyboardEvent) {

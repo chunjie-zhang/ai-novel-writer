@@ -18,6 +18,7 @@ export async function callAI(
     model,
     messages,
     temperature,
+    topP: 1,
     maxTokens,
   });
 }

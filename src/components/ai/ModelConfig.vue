@@ -138,6 +138,29 @@
         </div>
       </el-form-item>
 
+      <el-form-item label="Top P（核采样）">
+        <div class="slider-with-value">
+          <el-slider
+            v-model="aiStore.topP"
+            :min="0"
+            :max="1"
+            :step="0.05"
+            style="flex: 1"
+          />
+          <span class="slider-value">{{ aiStore.topP }}</span>
+        </div>
+        <div class="slider-hint">
+          越低输出越保守（只从概率较高的词中选取），越高越多样；1 表示不过滤
+        </div>
+      </el-form-item>
+
+      <el-form-item label="流式输出">
+        <el-switch v-model="aiStore.streaming" />
+        <div class="form-hint" style="margin-left: 10px">
+          开启：打字机逐字显示；关闭：一次性返回全文（生成更快、无逐字预览）
+        </div>
+      </el-form-item>
+
       <el-divider content-position="left">记忆设置</el-divider>
 
       <el-form-item label="携带章节数">

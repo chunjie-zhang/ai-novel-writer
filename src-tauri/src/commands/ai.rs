@@ -32,6 +32,7 @@ pub async fn call_ai_stream(
     model: String,
     messages: Vec<ChatMessage>,
     temperature: f32,
+    top_p: Option<f32>,
     max_tokens: u32,
     on_event: Channel<StreamChunk>,
 ) -> Result<(), String> {
@@ -43,7 +44,7 @@ pub async fn call_ai_stream(
         .build()
         .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
 
-    let request_body = json!({
+    let mut request_body = json!({
         "model": model,
         "messages": messages.iter().map(|m| json!({
             "role": m.role,
@@ -53,6 +54,9 @@ pub async fn call_ai_stream(
         "max_tokens": max_tokens,
         "stream": true
     });
+    if let Some(tp) = top_p {
+        request_body["top_p"] = json!(tp);
+    }
 
     let url = format!("{}/chat/completions", base_url.trim_end_matches('/'));
 
@@ -123,6 +127,7 @@ pub async fn call_ai(
     model: String,
     messages: Vec<ChatMessage>,
     temperature: f32,
+    top_p: Option<f32>,
     max_tokens: u32,
 ) -> Result<AIResponse, String> {
     let client = Client::builder()
@@ -131,7 +136,7 @@ pub async fn call_ai(
         .map_err(|e| format!("创建 HTTP 客户端失败: {}", e))?;
 
     // 构建请求体
-    let request_body = json!({
+    let mut request_body = json!({
         "model": model,
         "messages": messages.iter().map(|m| json!({
             "role": m.role,
@@ -141,6 +146,9 @@ pub async fn call_ai(
         "max_tokens": max_tokens,
         "stream": false
     });
+    if let Some(tp) = top_p {
+        request_body["top_p"] = json!(tp);
+    }
 
     let url = format!("{}/chat/completions", base_url.trim_end_matches('/'));
 

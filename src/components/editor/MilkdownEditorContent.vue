@@ -4,8 +4,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { Milkdown, useEditor } from "@milkdown/vue";
+import { TextSelection } from "prosemirror-state";
 import {
   Editor,
   rootCtx,
@@ -55,8 +56,82 @@ onMounted(() => {
   requestAnimationFrame(() => {
     ready.value = true;
     emit("ready");
+    trackCursor();
+    // 编辑器就绪后，若有待恢复的光标/滚动则应用（断稿记忆回溯）
+    if (pendingPos !== null || pendingScroll !== null) {
+      applyCursorRestore(pendingPos ?? 0, pendingScroll ?? 0);
+      pendingPos = null;
+      pendingScroll = null;
+    }
   });
 });
+
+onBeforeUnmount(() => {
+  cleanupCursorTracking?.();
+});
+
+// ---- 光标 / 滚动追踪（供断稿记忆「光标 / 滚动位置回溯」）----
+let cleanupCursorTracking: (() => void) | null = null;
+let pendingPos: number | null = null;
+let pendingScroll: number | null = null;
+
+function getScrollTop(): number {
+  const el = document.querySelector(".milkdown-editor");
+  return el ? (el as HTMLElement).scrollTop : 0;
+}
+
+/** 监听 ProseMirror 选区变化 + 容器滚动，把光标位置 / 滚动位置上报给 MainEditor */
+function trackCursor() {
+  const editor = (editorRef as any)?.get?.();
+  if (!editor) return;
+  editor.action((ctx: any) => {
+    const view = ctx.get(editorViewCtx);
+    const container = view.dom.closest(".milkdown-editor") as HTMLElement | null;
+
+    const onSelection = () => {
+      const sel = document.getSelection();
+      if (sel && sel.rangeCount > 0 && view.dom.contains(sel.anchorNode)) {
+        emit("cursor-update", view.state.selection.from, getScrollTop());
+      }
+    };
+    const onScroll = () => {
+      emit("cursor-update", view.state.selection.from, getScrollTop());
+    };
+
+    document.addEventListener("selectionchange", onSelection);
+    container?.addEventListener("scroll", onScroll);
+    cleanupCursorTracking = () => {
+      document.removeEventListener("selectionchange", onSelection);
+      container?.removeEventListener("scroll", onScroll);
+    };
+  });
+}
+
+/** 恢复光标位置 + 滚动位置（断稿记忆回溯） */
+function applyCursorRestore(pos: number, scroll: number) {
+  const editor = (editorRef as any)?.get?.();
+  if (!editor) {
+    pendingPos = pos;
+    pendingScroll = scroll;
+    return;
+  }
+  editor.action((ctx: any) => {
+    try {
+      const view = ctx.get(editorViewCtx);
+      const max = view.state.doc.content.size;
+      const p = Math.min(Math.max(Math.round(pos || 0), 0), max);
+      const tr = view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(p)));
+      view.dispatch(tr);
+      view.focus();
+    } catch (e) {
+      console.error("恢复光标位置失败:", e);
+    }
+  });
+  requestAnimationFrame(() => {
+    const el = document.querySelector(".milkdown-editor");
+    if (el) (el as HTMLElement).scrollTop = scroll || 0;
+  });
+}
 
 // 外部内容变化（如切换章节、AI 回填）时，用解析后的文档替换编辑器内容。
 // 注意：用户每次输入（含回车）也会触发 modelValue 变化，但那是编辑器自身的回显。
@@ -121,7 +196,7 @@ function replaceSelection(newText: string) {
   });
 }
 
-defineExpose({ getSelectionText, replaceSelection });
+defineExpose({ getSelectionText, replaceSelection, applyCursorRestore });
 </script>
 
 <style scoped>

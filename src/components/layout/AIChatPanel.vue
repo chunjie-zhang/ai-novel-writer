@@ -926,6 +926,58 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
   }
 }
 
+/**
+ * 生成单章记忆摘要并写入本地记忆库（memories.json，按小说 id 存放于项目目录）。
+ * 用于长篇创作的剧情连贯性：续写时通过 buildSmartContext 召回最近记忆注入上下文。
+ * 删除小说时，项目目录被整体删除，该小说的记忆库会一并清理（无需单独处理）。
+ * 后台任务：失败静默，不影响主流程。
+ */
+async function generateChapterMemory(
+  projectId: string,
+  chapterId: string,
+  chapterTitle: string,
+  chapterOrder: number,
+  content: string
+) {
+  try {
+    const body = (content || "").replace(/\s/g, "");
+    if (body.length < 100) return; // 太短不生成，避免无效摘要
+    const prompt = `请阅读下面的小说章节，生成该章节的「记忆摘要」，供长篇创作时保持剧情连贯（供 AI 续写时回忆）。
+
+要求：输出 JSON，不要用 Markdown 代码块包裹，不要任何说明文字：
+{
+  "summary": "用 2-3 句话概括本章发生的关键剧情（含人物、地点、事件、结果）",
+  "key_events": ["本章关键事件1", "事件2", "事件3", "事件4"]（3-6 个，每个一句话）
+}
+
+章节标题：${chapterTitle}
+
+章节内容：
+${content.slice(0, 4000)}`;
+    const result = await aiStore.silentCall(
+      [{ role: "user", content: prompt }],
+      { temperature: 0.3, maxTokens: 800 }
+    );
+    const parsed = extractJsonContent(result);
+    const summary = typeof parsed?.summary === "string" ? parsed.summary : "";
+    const keyEvents = Array.isArray(parsed?.key_events)
+      ? parsed.key_events.filter((k: unknown) => typeof k === "string").slice(0, 6)
+      : [];
+    if (!summary && keyEvents.length === 0) return; // 解析失败则跳过
+    await aiStore.saveMemory(projectId, {
+      chapter_id: chapterId,
+      chapter_title: chapterTitle,
+      chapter_order: chapterOrder,
+      summary: summary || keyEvents.join("；"),
+      key_events: keyEvents,
+    });
+    // 记忆已写入本地 memories.json；刷新项目结构，让后续创作能立即引用新记忆
+    await projectStore.openProject(projectId);
+  } catch (e) {
+    console.error("生成章节记忆失败:", e);
+  }
+}
+
 /** 多章节批量保存：把拆分出的多个章节分别新建为独立章节 */
 async function saveMultipleChapters(
   projectId: string,
@@ -934,6 +986,7 @@ async function saveMultipleChapters(
 ): Promise<string[]> {
   const existing = new Set(projectStore.chapters.map((c) => c.title));
   const savedTitles: string[] = [];
+  const savedChapters: { title: string; body: string }[] = [];
   for (const ch of chapters) {
     // 统一标题格式：去掉 #/路径/.md + 统一编号（中文数字→阿拉伯、去重复卷前缀）
     let title = normalizeChapterTitleNum(normalizeChapterTitle(ch.title));
@@ -953,8 +1006,17 @@ async function saveMultipleChapters(
       content: ch.body,
     });
     savedTitles.push(title);
+    savedChapters.push({ title, body: ch.body });
   }
   await projectStore.openProject(projectId);
+
+  // ===== 生成各章记忆摘要（按小说 id 存本地 memories.json，后台不阻塞） =====
+  for (const sc of savedChapters) {
+    const ch = projectStore.chapters.find((c) => c.title === sc.title);
+    if (ch) {
+      generateChapterMemory(projectId, ch.file_name, ch.title, ch.order, sc.body);
+    }
+  }
 
   // 在中间编辑器打开最后一个章节
   const lastTitle = savedTitles[savedTitles.length - 1];
@@ -1044,6 +1106,10 @@ async function autoSaveToChapter(contentOverride?: string) {
       // 右侧聊天不再展示完整章节（太长），替换为简短提示
       aiStore.replaceLastAssistant(`📖 已保存为章节「${title}」，全文已在中间编辑器展示，此处不再重复`);
       ElMessage.success(`已保存为章节「${title}」并在编辑器中打开`);
+      // 生成本章记忆摘要（按小说 id 存本地，后台执行）
+      if (chapter) {
+        generateChapterMemory(projectId, chapter.file_name, chapter.title, chapter.order, aiContent);
+      }
     } else {
       // ===== 追加到已有章节：读原文 + 追加 AI 内容 + 保存 =====
       const chapter = projectStore.chapters.find((c) => c.file_name === target);
@@ -1079,6 +1145,8 @@ async function autoSaveToChapter(contentOverride?: string) {
       // 右侧聊天不再展示完整章节（太长），替换为简短提示
       aiStore.replaceLastAssistant(`📖 已追加到章节「${chapter.title}」，全文已在中间编辑器展示，此处不再重复`);
       ElMessage.success(`已追加到章节「${chapter.title}」并在编辑器中展示`);
+      // 更新该章记忆摘要（按小说 id 存本地，后台执行）
+      generateChapterMemory(projectId, refreshed.file_name, refreshed.title, refreshed.order, newContent);
     }
 
     // ===== 自动回填小说元信息（大纲/世界观/小说信息/题材）=====
@@ -1234,6 +1302,7 @@ async function autoFillNovelMeta(projectId: string) {
             { role: "user", content: sample },
           ],
           temperature: 0.4,
+          topP: aiStore.topP,
           maxTokens: 8192,
         });
         result = extractJsonContent(response.content);

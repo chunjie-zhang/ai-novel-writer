@@ -226,6 +226,7 @@ export const useReferenceStore = defineStore("reference", () => {
               { role: "user", content: sampleContent },
             ],
             temperature: 0.3,
+            topP: aiStore.topP,
             maxTokens: 8192,
           });
           // 健壮提取 JSON（兼容代码块包裹/前后说明文字）

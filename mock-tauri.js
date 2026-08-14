@@ -34,6 +34,8 @@
           return { id: args.projectId, name: '我的帝国', chapters: [], volumes: [] };
         case 'delete_project':
           window.__PROJ_STORE__ = (window.__PROJ_STORE__ || []).filter(p => p.id !== args.projectId);
+          // 对齐真实 Rust remove_dir_all：memories.json 在项目目录内，删除项目即删除该小说全部记忆
+          if (window.__MEM_STORE__) delete window.__MEM_STORE__[args.projectId];
           return null;
         case 'get_storage_path':
           return '/mock/projects';
@@ -51,6 +53,28 @@
           return '/mock/app-data-dir';
         case 'open_data_dir':
           window.__OPENED_DATA_DIR__ = true;
+          return null;
+        case 'save_memory':
+          if (!window.__MEM_STORE__) window.__MEM_STORE__ = {};
+          if (!window.__MEM_STORE__[args.projectId]) window.__MEM_STORE__[args.projectId] = [];
+          const mem = JSON.parse(JSON.stringify(args.memory));
+          const mi = window.__MEM_STORE__[args.projectId].findIndex(m => m.chapter_id === mem.chapter_id);
+          if (mi >= 0) window.__MEM_STORE__[args.projectId][mi] = mem;
+          else window.__MEM_STORE__[args.projectId].push(mem);
+          return null;
+        case 'list_memories':
+          return window.__MEM_STORE__ && window.__MEM_STORE__[args.projectId] ? window.__MEM_STORE__[args.projectId] : [];
+        case 'call_ai':
+          window.__LAST_AI_ARGS__ = JSON.parse(JSON.stringify(args));
+          return { content: window.__MOCK_AI_REPLY__ || '', finish_reason: 'stop' };
+        case 'call_ai_stream':
+          window.__LAST_AI_ARGS__ = JSON.parse(JSON.stringify(args));
+          const reply = window.__MOCK_AI_REPLY__ || '';
+          const evt = args.onEvent;
+          if (evt && typeof evt.onmessage === 'function') {
+            if (reply) evt.onmessage({ delta: reply, done: false });
+            evt.onmessage({ delta: '', done: true });
+          }
           return null;
         default:
           return null;

@@ -44,8 +44,12 @@ function getSelectionText(): string {
 function replaceSelection(newText: string) {
   contentRef.value?.replaceSelection?.(newText);
 }
+// 透传光标/滚动恢复能力（断稿记忆回溯）
+function applyCursorRestore(pos: number, scroll: number) {
+  contentRef.value?.applyCursorRestore?.(pos, scroll);
+}
 
-defineExpose({ getSelectionText, replaceSelection });
+defineExpose({ getSelectionText, replaceSelection, applyCursorRestore });
 </script>
 
 <style scoped>

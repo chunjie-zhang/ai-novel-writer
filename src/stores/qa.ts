@@ -137,6 +137,7 @@ export const useQAStore = defineStore("qa", () => {
           { role: "user", content: `${context}\n\n问题：${question}` },
         ],
         temperature: 0.3,
+        topP: aiStore.topP,
         maxTokens: 1500,
       });
 

@@ -25,6 +25,10 @@ interface PersistedAIConfig {
   customModelName: string;
   temperature: number;
   maxTokens: number;
+  /** top_p（核采样，0-1） */
+  topP?: number;
+  /** 是否流式输出（打字机效果；关闭则一次性返回） */
+  streaming?: boolean;
   /** 目标字数（每次生成控制在此附近；留空不限制） */
   targetWordCount?: number;
 }
@@ -89,6 +93,10 @@ export const useAIStore = defineStore("ai", () => {
   const customModelName = ref(saved?.customModelName ?? "");
   const temperature = ref(saved?.temperature ?? 0.8);
   const maxTokens = ref(saved?.maxTokens ?? 4096);
+  /** top_p（核采样，0-1；默认 1 = 不过滤） */
+  const topP = ref(saved?.topP ?? 1);
+  /** 是否流式输出（默认开启打字机效果；关闭则一次性返回全文） */
+  const streaming = ref(saved?.streaming ?? true);
   /** 目标字数（全局配置，设置一次后持久生效；留空不限制） */
   const targetWordCount = ref<number | undefined>(saved?.targetWordCount ?? undefined);
 
@@ -133,7 +141,7 @@ export const useAIStore = defineStore("ai", () => {
   // 本地 localStorage 立即保存；磁盘防抖保存（避免频繁 IO）
   let diskSaveTimer: ReturnType<typeof setTimeout> | null = null;
   watch(
-    [modelProvider, builtinVariant, customApiKey, customBaseUrl, customModelName, temperature, maxTokens, targetWordCount],
+    [modelProvider, builtinVariant, customApiKey, customBaseUrl, customModelName, temperature, maxTokens, topP, streaming, targetWordCount],
     () => {
       persistConfigLocal();
       scheduleDiskSave();
@@ -156,6 +164,8 @@ export const useAIStore = defineStore("ai", () => {
       customModelName: customModelName.value,
       temperature: temperature.value,
       maxTokens: maxTokens.value,
+      topP: topP.value,
+      streaming: streaming.value,
       targetWordCount: targetWordCount.value,
     };
   }
@@ -193,6 +203,8 @@ export const useAIStore = defineStore("ai", () => {
     if (config.customModelName !== undefined) customModelName.value = config.customModelName;
     if (config.temperature !== undefined) temperature.value = config.temperature;
     if (config.maxTokens !== undefined) maxTokens.value = config.maxTokens;
+    if (config.topP !== undefined) topP.value = config.topP;
+    if (config.streaming !== undefined) streaming.value = config.streaming;
     if (config.targetWordCount !== undefined) targetWordCount.value = config.targetWordCount;
     // 应用后同步到 localStorage，避免下次又读到旧的
     persistConfigLocal();
@@ -287,6 +299,26 @@ export const useAIStore = defineStore("ai", () => {
         assistantIdx = messages.value.length - 1;
       }
 
+      // ===== 非流式模式（设置里关闭「流式输出」）：一次性返回全文，不走打字机 =====
+      if (!streaming.value) {
+        const res = await invoke<AIResponse>("call_ai", {
+          baseUrl: resolvedBaseUrl.value,
+          apiKey: resolvedApiKey.value,
+          model: resolvedModelName.value,
+          messages: allMessages,
+          temperature: finalTemperature,
+          topP: topP.value,
+          maxTokens: resolvedMaxTokens.value,
+        });
+        const fullText = res.content || "";
+        streamingDraft.value = fullText;
+        if (writeToChat && assistantIdx >= 0 && messages.value[assistantIdx]) {
+          messages.value[assistantIdx].content = fullText;
+        }
+        persistChat();
+        return fullText;
+      }
+
       const channel = new Channel<StreamChunk>();
       let full = "";
       let resolveDone!: (v: string) => void;
@@ -315,6 +347,7 @@ export const useAIStore = defineStore("ai", () => {
         model: resolvedModelName.value,
         messages: allMessages,
         temperature: finalTemperature,
+        topP: topP.value,
         maxTokens: resolvedMaxTokens.value,
         onEvent: channel,
       });
@@ -365,6 +398,7 @@ export const useAIStore = defineStore("ai", () => {
       model: resolvedModelName.value,
       messages: [{ role: "user", content: "你好，请只回复四个字：连接成功" }],
       temperature: 0.3,
+      topP: 1,
       maxTokens: 50,
     });
     return result.content;
@@ -376,7 +410,7 @@ export const useAIStore = defineStore("ai", () => {
    */
   async function silentCall(
     messages: ChatMessage[],
-    opts: { temperature?: number; maxTokens?: number } = {}
+    opts: { temperature?: number; maxTokens?: number; topP?: number } = {}
   ): Promise<string> {
     const result = await invoke<AIResponse>("call_ai", {
       baseUrl: resolvedBaseUrl.value,
@@ -384,6 +418,7 @@ export const useAIStore = defineStore("ai", () => {
       model: resolvedModelName.value,
       messages,
       temperature: opts.temperature ?? temperature.value,
+      topP: opts.topP ?? topP.value,
       maxTokens: opts.maxTokens ?? resolvedMaxTokens.value,
     });
     return result.content;
@@ -402,6 +437,8 @@ export const useAIStore = defineStore("ai", () => {
     customModelName,
     temperature,
     maxTokens,
+    topP,
+    streaming,
     targetWordCount,
     // 解析后的只读参数（用于实际调用）
     resolvedApiKey,
