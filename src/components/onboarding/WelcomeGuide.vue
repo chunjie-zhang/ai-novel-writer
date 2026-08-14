@@ -160,8 +160,9 @@ const steps = [
     desc: "右侧面板是 AI 创作助手：",
     points: [
       { icon: "lucide:message-square", text: "直接输入需求：如“续写当前章节”“写一段打斗场景”" },
-      { icon: "lucide:sparkles", text: "写作技能：点 ✨ 选择写大纲 / 人设 / 剧情等技能" },
-      { icon: "lucide:upload", text: "导入参考小说：点 ⬆ 上传小说，让 AI 参考其文风" },
+      { icon: "lucide:store", text: "写作技能：输入 @ 快速选择技能，或点顶部 🛍️ 打开技能市场，支持多技能同时生效" },
+      { icon: "lucide:upload", text: "导入参考小说：点 ⬆ 上传小说，用「仿写续写」技能做同质化改编（自动换名换皮，不抄袭）" },
+      { icon: "lucide:target", text: "指定输出：AI 生成可写入指定小说 / 章节，设置目标字数，支持批量续写、停止与实时进度" },
       { icon: "lucide:file-plus-2", text: "每条 AI 回复下方可一键「保存为章节」或「保存为角色」" },
     ],
     action: "",
