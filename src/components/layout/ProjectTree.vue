@@ -255,6 +255,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { useProjectStore } from "@/stores/project";
 import { useEditorStore } from "@/stores/editor";
 import { useVersionsStore } from "@/stores/versions";
+import { useReferenceStore } from "@/stores/reference";
 import { invoke } from "@tauri-apps/api/core";
 import OutlinePanel from "@/components/novel/OutlinePanel.vue";
 import BackupManager from "@/components/novel/BackupManager.vue";
@@ -520,6 +521,11 @@ async function handleDeleteProject(proj: any) {
   try {
     await projectStore.deleteProject(proj.id);
     useVersionsStore().clearProject(proj.id);
+    // 若当前参考小说与删除的项目同名，联动清理参考小说及其依赖技能（仿写续写等）
+    const refStore = useReferenceStore();
+    if (refStore.hasReference && refStore.referenceNovel?.title === proj.name) {
+      refStore.clear();
+    }
     ElMessage.success(`已删除小说「${proj.name}」`);
   } catch (e) {
     ElMessage.error("删除失败: " + e);

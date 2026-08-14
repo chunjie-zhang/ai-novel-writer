@@ -2,14 +2,22 @@
 // 用 localStorage 持久化，模拟"磁盘写入"跨刷新保留
 (function () {
   const KEY = '__MOCK_REF_STORE__';
+  const PROJ_KEY = '__MOCK_PROJ_STORE__';
   window.__REF_STORE__ = {};
   try {
     const saved = localStorage.getItem(KEY);
     if (saved) window.__REF_STORE__ = JSON.parse(saved);
   } catch (e) {}
 
+  window.__PROJ_STORE__ = [];
+  try {
+    const savedProj = localStorage.getItem(PROJ_KEY);
+    if (savedProj) window.__PROJ_STORE__ = JSON.parse(savedProj);
+  } catch (e) {}
+
   function persist() {
     try { localStorage.setItem(KEY, JSON.stringify(window.__REF_STORE__)); } catch (e) {}
+    try { localStorage.setItem(PROJ_KEY, JSON.stringify(window.__PROJ_STORE__)); } catch (e) {}
   }
 
   window.__TAURI_INTERNALS__ = {
@@ -21,7 +29,14 @@
     invoke: async (cmd, args = {}) => {
       switch (cmd) {
         case 'list_projects':
-          return [];
+          return window.__PROJ_STORE__ || [];
+        case 'get_project_structure':
+          return { id: args.projectId, name: '我的帝国', chapters: [], volumes: [] };
+        case 'delete_project':
+          window.__PROJ_STORE__ = (window.__PROJ_STORE__ || []).filter(p => p.id !== args.projectId);
+          return null;
+        case 'get_storage_path':
+          return '/mock/projects';
         case 'save_reference_state':
           window.__REF_STORE__[args.id] = JSON.parse(JSON.stringify(args.data));
           persist();

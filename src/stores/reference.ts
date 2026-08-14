@@ -9,6 +9,7 @@ import type {
 } from "@/types";
 import { WRITING_MODES } from "@/types";
 import { useAIStore } from "./ai";
+import { useSkillStore } from "@/skills/store";
 import { extractJsonContent } from "@/utils/ai";
 
 interface RawImportedNovel {
@@ -345,6 +346,15 @@ ${ctx}
     analysis.value = null;
     writingMode.value = null;
     selectedChapters.value = [];
+    // 参考小说已删除：联动移除依赖它的技能（仿写续写/仿写风格/借鉴剧情），避免残留失效技能
+    try {
+      const skillStore = useSkillStore();
+      ["imitate-and-continue", "imitate-style", "reference-plot"].forEach(
+        (sid) => skillStore.removeActiveSkill(sid)
+      );
+    } catch (e) {
+      console.error("清理依赖技能失败:", e);
+    }
     if (id) {
       invoke("delete_reference_state", { id }).catch((e) =>
         console.error("删除参考小说失败:", e)
