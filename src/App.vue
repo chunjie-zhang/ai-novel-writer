@@ -20,8 +20,9 @@
       </div>
       <div class="header-right">
         <el-tooltip content="技能市场" placement="bottom">
-          <el-button text circle @click="openSkillMarket">
+          <el-button text class="header-action" @click="openSkillMarket">
             <el-icon><Icon icon="lucide:store" /></el-icon>
+            <span class="header-action-label">技能市场</span>
           </el-button>
         </el-tooltip>
         <el-tooltip content="新手引导 / 帮助" placement="bottom">
@@ -353,10 +354,12 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  background: var(--panel-bg);
+  padding: 0 18px;
+  background: color-mix(in srgb, var(--panel-bg) 88%, transparent);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
   border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 8px rgba(20, 22, 40, 0.06);
   /* Windows/Linux 用：WebKit 专属拖拽（macOS WKWebView 不支持，走 data-tauri-drag-region） */
   -webkit-app-region: drag;
   flex-shrink: 0;
@@ -452,16 +455,43 @@ onBeforeUnmount(() => {
   -webkit-app-region: no-drag;
 }
 
+/* 顶栏带文字的操作按钮（技能市场）：胶囊样式 + 品牌色 */
+.header-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  height: 30px;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent);
+  transition: background 0.2s, color 0.2s;
+}
+.header-action:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.header-action-label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+}
+
 .app-main {
   flex: 1;
   display: flex;
   overflow: hidden;
+  padding: 10px;
+  gap: 10px;
+  background: var(--app-bg);
 }
 
 .sidebar-left {
   width: var(--sidebar-width);
   background: var(--panel-bg);
-  border-right: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   overflow-y: auto;
   flex-shrink: 0;
 }
@@ -473,9 +503,10 @@ onBeforeUnmount(() => {
 /* 拖拽分隔条 */
 .resize-handle {
   flex-shrink: 0;
-  width: 5px;
+  width: 6px;
   cursor: col-resize;
   background: transparent;
+  border-radius: 3px;
   transition: background 0.15s;
   z-index: 10;
   position: relative;
@@ -484,7 +515,7 @@ onBeforeUnmount(() => {
 .resize-handle:hover,
 .resize-handle.dragging {
   background: var(--accent);
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 /* 专注模式：隐藏侧边栏和分隔条 */
@@ -510,13 +541,18 @@ onBeforeUnmount(() => {
   flex: 1;
   min-width: 420px;
   background: var(--panel-bg);
-  margin: 0 1px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .sidebar-right {
   width: var(--right-panel-width);
   background: var(--panel-bg);
-  border-left: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
   overflow-y: auto;
   flex-shrink: 0;
 }

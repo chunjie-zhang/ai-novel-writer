@@ -66,10 +66,14 @@ let autoTimer: ReturnType<typeof setInterval> | null = null;
 
 async function loadBackups() {
   try {
-    backups.value = await invoke<string[]>("list_backups", {
+    const list = await invoke<string[]>("list_backups", {
       projectId: props.projectId,
     });
-  } catch (e) { console.error("加载备份列表失败:", e); }
+    backups.value = Array.isArray(list) ? list : [];
+  } catch (e) {
+    console.error("加载备份列表失败:", e);
+    backups.value = [];
+  }
 }
 
 async function handleBackup() {

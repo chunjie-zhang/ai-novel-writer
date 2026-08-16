@@ -57,7 +57,7 @@ defineExpose({ getSelectionText, replaceSelection, applyCursorRestore });
   height: 100%;
   overflow-y: auto;
   padding: 28px 40px;
-  background: var(--panel-bg);
+  background: var(--editor-bg, var(--panel-bg));
 }
 
 /* Milkdown 编辑器样式覆盖（深色阅读） */

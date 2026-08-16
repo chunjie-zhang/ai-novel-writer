@@ -1899,12 +1899,14 @@ onMounted(() => {
 }
 
 .message-item.user .message-avatar {
-  background: var(--accent);
+  background: var(--grad-brand);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
   color: #fff;
 }
 
 .message-item.assistant .message-avatar {
-  background: var(--green);
+  background: linear-gradient(135deg, #34d399, #10b981);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
   color: #fff;
 }
 
@@ -1914,24 +1916,26 @@ onMounted(() => {
 
 .message-text {
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 14px;
   font-size: 13px;
   line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
+  box-shadow: var(--shadow-sm);
 }
 
 .message-item.user .message-text {
-  background: linear-gradient(135deg, var(--accent), #3a6fce);
+  background: var(--grad-brand);
   color: #fff;
-  border-bottom-right-radius: 3px;
+  border-bottom-right-radius: 4px;
 }
 
 .message-item.assistant .message-text {
   background: var(--panel-bg-2);
   border: 1px solid var(--border);
   color: var(--text-1);
-  border-bottom-left-radius: 3px;
+  border-bottom-left-radius: 4px;
+  box-shadow: none;
 }
 
 .message-actions {
@@ -2010,9 +2014,12 @@ onMounted(() => {
 
 .chat-input-area {
   position: relative;
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
-  background: var(--panel-bg-2);
+  margin: 10px 12px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--panel-bg);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ===== @提及技能浮层 ===== */

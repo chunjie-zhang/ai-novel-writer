@@ -31,107 +31,123 @@
 :root {
   color-scheme: light;
 
-  /* ---- 应用语义变量 ---- */
-  --app-bg: #f4f5f7;            /* 最外层页面背景 */
+  /* ---- 应用语义变量（UI v2：柔和中性 + 靛蓝紫品牌色） ---- */
+  --app-bg: #eef0f7;            /* 最外层页面背景（柔和蓝灰） */
   --panel-bg: #ffffff;          /* 面板 / 卡片背景 */
-  --panel-bg-2: #f0f1f4;        /* 次级面板背景 */
-  --panel-hover: #e9ebef;       /* hover 背景 */
-  --border: #dfe2e8;            /* 边框 */
-  --border-light: #d0d5dd;      /* 浅边框 / 分隔线 */
-  --text-1: #1f2329;            /* 主文字 */
-  --text-2: #5a6472;            /* 次级文字 */
-  --text-3: #8f98a5;            /* 弱化文字 */
-  --accent: #3f7df0;            /* 主色（蓝） */
-  --accent-soft: rgba(63, 125, 240, 0.12);
-  --green: #2fae66;
-  --green-soft: rgba(47, 174, 102, 0.12);
-  --orange: #d9890f;
-  --orange-soft: rgba(217, 137, 15, 0.12);
-  --red: #d9505a;
-  --red-soft: rgba(217, 80, 90, 0.12);
+  --panel-bg-2: #f5f6fb;        /* 次级面板背景 */
+  --editor-bg: #fbfaf7;         /* 中间编辑器纸张背景（暖米白，阅读更舒适） */
+  --panel-hover: #eef1f8;       /* hover 背景 */
+  --border: #e5e8f2;            /* 边框 */
+  --border-light: #d4dae8;      /* 浅边框 / 分隔线 */
+  --text-1: #1b1e2b;            /* 主文字 */
+  --text-2: #5c6480;            /* 次级文字 */
+  --text-3: #98a0b8;            /* 弱化文字 */
+  --accent: #6366f1;            /* 主色（靛蓝 indigo） */
+  --accent-2: #8b5cf6;          /* 辅色（紫 violet，渐变用） */
+  --accent-soft: rgba(99, 102, 241, 0.12);
+  --green: #10b981;
+  --green-soft: rgba(16, 185, 129, 0.12);
+  --orange: #f59e0b;
+  --orange-soft: rgba(245, 158, 11, 0.13);
+  --red: #ef4444;
+  --red-soft: rgba(239, 68, 68, 0.12);
 
-  --header-height: 48px;
+  --header-height: 52px;
   --sidebar-width: 280px;
   --right-panel-width: 360px;
 
-  /* ---- Element Plus 变量覆盖（浅色） ---- */
-  --el-color-primary: #3f7df0;
-  --el-color-primary-light-3: #6a97f3;
-  --el-color-primary-light-5: #94b4f7;
-  --el-color-primary-light-7: #c3d6fb;
-  --el-color-primary-light-8: #d9e4fd;
-  --el-color-primary-light-9: #f0f5ff;
-  --el-color-primary-dark-2: #3264c0;
+  /* ---- UI v2 通用：圆角 / 阴影 / 渐变 ---- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+  --shadow-sm: 0 1px 2px rgba(20, 22, 40, 0.05), 0 4px 14px rgba(20, 22, 40, 0.05);
+  --shadow-md: 0 2px 6px rgba(20, 22, 40, 0.06), 0 12px 32px rgba(20, 22, 40, 0.09);
+  --shadow-lg: 0 8px 24px rgba(20, 22, 40, 0.12), 0 24px 64px rgba(20, 22, 40, 0.14);
+  --grad-brand: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
 
-  --el-color-success: #2fae66;
-  --el-color-success-light-3: #7fc69b;
-  --el-color-success-light-5: #a5d9ba;
-  --el-color-success-light-7: #cdebd8;
-  --el-color-success-light-8: #e0f3e7;
-  --el-color-success-light-9: #f2faf5;
-  --el-color-success-dark-2: #268b52;
+  /* ---- Element Plus 变量覆盖（浅色 · UI v2） ---- */
+  --el-color-primary: #6366f1;
+  --el-color-primary-light-3: #8284f4;
+  --el-color-primary-light-5: #a1a2f7;
+  --el-color-primary-light-7: #c5c6fa;
+  --el-color-primary-light-8: #dcdcfd;
+  --el-color-primary-light-9: #f1f1ff;
+  --el-color-primary-dark-2: #5153cf;
 
-  --el-color-warning: #d9890f;
-  --el-color-warning-light-3: #e4ad54;
-  --el-color-warning-light-5: #edc98a;
-  --el-color-warning-light-7: #f6e3c1;
-  --el-color-warning-light-8: #f9eed5;
-  --el-color-warning-light-9: #fdf8ee;
-  --el-color-warning-dark-2: #ae6e0c;
+  --el-color-success: #10b981;
+  --el-color-success-light-3: #6fd8b3;
+  --el-color-success-light-5: #9be6cc;
+  --el-color-success-light-7: #c7f2e3;
+  --el-color-success-light-8: #ddf8ee;
+  --el-color-success-light-9: #f0fcf7;
+  --el-color-success-dark-2: #0d9467;
 
-  --el-color-danger: #d9505a;
-  --el-color-danger-light-3: #e58a90;
-  --el-color-danger-light-5: #eeafb4;
-  --el-color-danger-light-7: #f6d3d6;
-  --el-color-danger-light-8: #fae3e5;
-  --el-color-danger-light-9: #fdf3f4;
-  --el-color-danger-dark-2: #ad4048;
+  --el-color-warning: #f59e0b;
+  --el-color-warning-light-3: #f9bd5a;
+  --el-color-warning-light-5: #fbd28a;
+  --el-color-warning-light-7: #fde7bd;
+  --el-color-warning-light-8: #fef1d6;
+  --el-color-warning-light-9: #fffaf0;
+  --el-color-warning-dark-2: #d48609;
 
-  --el-color-error: #d9505a;
-  --el-color-error-light-3: #e58a90;
-  --el-color-error-light-5: #eeafb4;
-  --el-color-error-light-7: #f6d3d6;
-  --el-color-error-light-8: #fae3e5;
-  --el-color-error-light-9: #fdf3f4;
-  --el-color-error-dark-2: #ad4048;
+  --el-color-danger: #ef4444;
+  --el-color-danger-light-3: #f58d8d;
+  --el-color-danger-light-5: #f9b4b4;
+  --el-color-danger-light-7: #fcd9d9;
+  --el-color-danger-light-8: #fde9e9;
+  --el-color-danger-light-9: #fef6f6;
+  --el-color-danger-dark-2: #d73b3b;
+
+  --el-color-error: #ef4444;
+  --el-color-error-light-3: #f58d8d;
+  --el-color-error-light-5: #f9b4b4;
+  --el-color-error-light-7: #fcd9d9;
+  --el-color-error-light-8: #fde9e9;
+  --el-color-error-light-9: #fef6f6;
+  --el-color-error-dark-2: #d73b3b;
 
   --el-bg-color: #ffffff;
-  --el-bg-color-page: #f4f5f7;
+  --el-bg-color-page: #eef0f7;
   --el-bg-color-overlay: #ffffff;
-  --el-bg-color-overlay-2: #fbfbfc;
+  --el-bg-color-overlay-2: #fbfbfe;
 
-  --el-fill-color: #eef0f3;
-  --el-fill-color-light: #f4f5f7;
-  --el-fill-color-lighter: #f7f8fa;
-  --el-fill-color-extra-light: #fafafa;
-  --el-fill-color-dark: #e0e3e8;
-  --el-fill-color-darker: #d6d9df;
+  --el-fill-color: #eef0f8;
+  --el-fill-color-light: #f4f5fb;
+  --el-fill-color-lighter: #f7f8fc;
+  --el-fill-color-extra-light: #fafbfe;
+  --el-fill-color-dark: #e2e5f0;
+  --el-fill-color-darker: #d8dce8;
   --el-fill-color-blank: #ffffff;
 
-  --el-text-color-primary: #1f2329;
-  --el-text-color-regular: #3f4650;
-  --el-text-color-secondary: #5a6472;
-  --el-text-color-placeholder: #9aa3af;
-  --el-text-color-disabled: #c0c4cc;
+  --el-text-color-primary: #1b1e2b;
+  --el-text-color-regular: #3f4460;
+  --el-text-color-secondary: #5c6480;
+  --el-text-color-placeholder: #9aa3bd;
+  --el-text-color-disabled: #c0c4d4;
 
-  --el-border-color: #d0d5dd;
-  --el-border-color-light: #d8dce3;
-  --el-border-color-lighter: #dfe2e8;
-  --el-border-color-extra-light: #e6e9ee;
-  --el-border-color-dark: #c4c9d2;
-  --el-border-color-darker: #b9bfc9;
+  --el-border-color: #d4dae8;
+  --el-border-color-light: #dce1ee;
+  --el-border-color-lighter: #e5e8f2;
+  --el-border-color-extra-light: #eceef6;
+  --el-border-color-dark: #c3c9db;
+  --el-border-color-darker: #b8bfd3;
 
-  --el-mask-color: rgba(0, 0, 0, 0.45);
-  --el-mask-color-extra-light: rgba(0, 0, 0, 0.25);
+  --el-mask-color: rgba(20, 22, 40, 0.45);
+  --el-mask-color-extra-light: rgba(20, 22, 40, 0.25);
 
-  --el-box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
-  --el-box-shadow-light: 0 4px 14px rgba(0, 0, 0, 0.08);
-  --el-box-shadow-lighter: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --el-box-shadow-dark: 0 10px 36px rgba(0, 0, 0, 0.16);
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+  --el-border-radius-round: 999px;
 
-  --el-disabled-bg-color: #f4f5f7;
-  --el-disabled-text-color: #c0c4cc;
-  --el-disabled-border-color: #dfe2e8;
+  --el-box-shadow: 0 8px 28px rgba(20, 22, 40, 0.12);
+  --el-box-shadow-light: 0 4px 14px rgba(20, 22, 40, 0.08);
+  --el-box-shadow-lighter: 0 2px 8px rgba(20, 22, 40, 0.06);
+  --el-box-shadow-dark: 0 10px 36px rgba(20, 22, 40, 0.16);
+
+  --el-disabled-bg-color: #f4f5fb;
+  --el-disabled-text-color: #c0c4d4;
+  --el-disabled-border-color: #e5e8f2;
 }
 
 /* ============================================================
@@ -140,107 +156,123 @@
 :root.theme-dark {
   color-scheme: dark;
 
-  /* ---- 应用语义变量 ---- */
-  --app-bg: #14161b;            /* 最外层页面背景 */
-  --panel-bg: #1c1f26;          /* 面板 / 卡片背景 */
-  --panel-bg-2: #22262f;        /* 次级面板背景 */
-  --panel-hover: #282d37;       /* hover 背景 */
-  --border: #2e3340;            /* 边框 */
-  --border-light: #3a4150;      /* 浅边框 / 分隔线 */
-  --text-1: #e8eaf0;            /* 主文字 */
-  --text-2: #a3aab8;            /* 次级文字 */
-  --text-3: #6d7484;            /* 弱化文字 */
-  --accent: #4d8dff;            /* 主色（蓝） */
-  --accent-soft: rgba(77, 141, 255, 0.16);
-  --green: #46d07f;
-  --green-soft: rgba(70, 208, 127, 0.15);
-  --orange: #e8a23a;
-  --orange-soft: rgba(232, 162, 58, 0.15);
-  --red: #e5636b;
-  --red-soft: rgba(229, 99, 107, 0.15);
+  /* ---- 应用语义变量（UI v2 · 深色） ---- */
+  --app-bg: #10131b;            /* 最外层页面背景 */
+  --panel-bg: #181b27;          /* 面板 / 卡片背景 */
+  --panel-bg-2: #1f2331;        /* 次级面板背景 */
+  --editor-bg: #1b1f2c;         /* 中间编辑器纸张背景（略浅于面板） */
+  --panel-hover: #252a3a;       /* hover 背景 */
+  --border: #2a3040;            /* 边框 */
+  --border-light: #363d52;      /* 浅边框 / 分隔线 */
+  --text-1: #eceef6;            /* 主文字 */
+  --text-2: #a6adc5;            /* 次级文字 */
+  --text-3: #6f7690;            /* 弱化文字 */
+  --accent: #818cf8;            /* 主色（靛蓝 indigo） */
+  --accent-2: #a78bfa;          /* 辅色（紫 violet） */
+  --accent-soft: rgba(129, 140, 248, 0.16);
+  --green: #34d399;
+  --green-soft: rgba(52, 211, 153, 0.15);
+  --orange: #fbbf24;
+  --orange-soft: rgba(251, 191, 36, 0.15);
+  --red: #f87171;
+  --red-soft: rgba(248, 113, 113, 0.15);
 
-  --header-height: 48px;
+  --header-height: 52px;
   --sidebar-width: 280px;
   --right-panel-width: 360px;
 
-  /* ---- Element Plus 变量覆盖 ---- */
-  --el-color-primary: #4d8dff;
-  --el-color-primary-light-3: #6ea2ff;
-  --el-color-primary-light-5: #8cb4ff;
-  --el-color-primary-light-7: #2e5fbf;
-  --el-color-primary-light-8: #274f9f;
-  --el-color-primary-light-9: #1d3a73;
-  --el-color-primary-dark-2: #3a6fce;
+  /* ---- UI v2 通用：圆角 / 阴影 / 渐变 ---- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 24px 64px rgba(0, 0, 0, 0.45);
+  --grad-brand: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
 
-  --el-color-success: #46d07f;
-  --el-color-success-light-3: #2e9c5e;
-  --el-color-success-light-5: #24774b;
-  --el-color-success-light-7: #1b5737;
-  --el-color-success-light-8: #16472d;
-  --el-color-success-light-9: #12341f;
-  --el-color-success-dark-2: #5fd88f;
+  /* ---- Element Plus 变量覆盖（深色 · UI v2） ---- */
+  --el-color-primary: #818cf8;
+  --el-color-primary-light-3: #93a0fa;
+  --el-color-primary-light-5: #a7b1fb;
+  --el-color-primary-light-7: #5f6adb;
+  --el-color-primary-light-8: #525cbf;
+  --el-color-primary-light-9: #3b448e;
+  --el-color-primary-dark-2: #8f9af8;
 
-  --el-color-warning: #e8a23a;
-  --el-color-warning-light-3: #b97c24;
-  --el-color-warning-light-5: #8d5f1c;
-  --el-color-warning-light-7: #6b4716;
-  --el-color-warning-light-8: #573a12;
-  --el-color-warning-light-9: #402b0d;
-  --el-color-warning-dark-2: #f0b45a;
+  --el-color-success: #34d399;
+  --el-color-success-light-3: #1f9e75;
+  --el-color-success-light-5: #187a5a;
+  --el-color-success-light-7: #125c44;
+  --el-color-success-light-8: #0e4a37;
+  --el-color-success-light-9: #0a3729;
+  --el-color-success-dark-2: #4ddba8;
 
-  --el-color-danger: #e5636b;
-  --el-color-danger-light-3: #b3454d;
-  --el-color-danger-light-5: #8a353c;
-  --el-color-danger-light-7: #672830;
-  --el-color-danger-light-8: #552026;
-  --el-color-danger-light-9: #3f181c;
-  --el-color-danger-dark-2: #ec7d84;
+  --el-color-warning: #fbbf24;
+  --el-color-warning-light-3: #c48f17;
+  --el-color-warning-light-5: #946d13;
+  --el-color-warning-light-7: #6f520f;
+  --el-color-warning-light-8: #5a430d;
+  --el-color-warning-light-9: #42310a;
+  --el-color-warning-dark-2: #fccb4d;
 
-  --el-color-error: #e5636b;
-  --el-color-error-light-3: #b3454d;
-  --el-color-error-light-5: #8a353c;
-  --el-color-error-light-7: #672830;
-  --el-color-error-light-8: #552026;
-  --el-color-error-light-9: #3f181c;
-  --el-color-error-dark-2: #ec7d84;
+  --el-color-danger: #f87171;
+  --el-color-danger-light-3: #c54f4f;
+  --el-color-danger-light-5: #963b3b;
+  --el-color-danger-light-7: #702c2c;
+  --el-color-danger-light-8: #5c2424;
+  --el-color-danger-light-9: #431a1a;
+  --el-color-danger-dark-2: #f98d8d;
 
-  --el-bg-color: #1c1f26;
-  --el-bg-color-page: #14161b;
-  --el-bg-color-overlay: #242933;
-  --el-bg-color-overlay-2: #2b313d;
+  --el-color-error: #f87171;
+  --el-color-error-light-3: #c54f4f;
+  --el-color-error-light-5: #963b3b;
+  --el-color-error-light-7: #702c2c;
+  --el-color-error-light-8: #5c2424;
+  --el-color-error-light-9: #431a1a;
+  --el-color-error-dark-2: #f98d8d;
 
-  --el-fill-color: #272c36;
-  --el-fill-color-light: #22262f;
-  --el-fill-color-lighter: #1f232b;
-  --el-fill-color-extra-light: #1d2129;
-  --el-fill-color-dark: #2e3440;
-  --el-fill-color-darker: #343b49;
-  --el-fill-color-blank: #1c1f26;
+  --el-bg-color: #181b27;
+  --el-bg-color-page: #10131b;
+  --el-bg-color-overlay: #222636;
+  --el-bg-color-overlay-2: #292e40;
 
-  --el-text-color-primary: #e8eaf0;
-  --el-text-color-regular: #c6ccd6;
-  --el-text-color-secondary: #a3aab8;
-  --el-text-color-placeholder: #6d7484;
-  --el-text-color-disabled: #4a5160;
+  --el-fill-color: #242938;
+  --el-fill-color-light: #202533;
+  --el-fill-color-lighter: #1d2230;
+  --el-fill-color-extra-light: #1b1f2c;
+  --el-fill-color-dark: #2b3143;
+  --el-fill-color-darker: #313849;
+  --el-fill-color-blank: #181b27;
 
-  --el-border-color: #3a4150;
-  --el-border-color-light: #343b49;
-  --el-border-color-lighter: #2e3340;
-  --el-border-color-extra-light: #272c36;
-  --el-border-color-dark: #434b5c;
-  --el-border-color-darker: #4d5669;
+  --el-text-color-primary: #eceef6;
+  --el-text-color-regular: #c8cde0;
+  --el-text-color-secondary: #a6adc5;
+  --el-text-color-placeholder: #6f7690;
+  --el-text-color-disabled: #4a5168;
 
-  --el-mask-color: rgba(8, 10, 14, 0.72);
-  --el-mask-color-extra-light: rgba(8, 10, 14, 0.4);
+  --el-border-color: #363d52;
+  --el-border-color-light: #303748;
+  --el-border-color-lighter: #2a3040;
+  --el-border-color-extra-light: #242938;
+  --el-border-color-dark: #414a63;
+  --el-border-color-darker: #4c5571;
+
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+  --el-border-radius-round: 999px;
+
+  --el-mask-color: rgba(8, 10, 16, 0.72);
+  --el-mask-color-extra-light: rgba(8, 10, 16, 0.4);
 
   --el-box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
   --el-box-shadow-light: 0 4px 14px rgba(0, 0, 0, 0.4);
   --el-box-shadow-lighter: 0 2px 8px rgba(0, 0, 0, 0.32);
   --el-box-shadow-dark: 0 10px 36px rgba(0, 0, 0, 0.6);
 
-  --el-disabled-bg-color: #20242c;
-  --el-disabled-text-color: #4a5160;
-  --el-disabled-border-color: #2e3340;
+  --el-disabled-bg-color: #202533;
+  --el-disabled-text-color: #4a5168;
+  --el-disabled-border-color: #2a3040;
 }
 
 * {
@@ -317,6 +349,150 @@ body {
 
 .el-sub-menu__title:hover {
   background: var(--panel-hover);
+}
+
+/* ============================================================
+   UI v2 全局增强（现代竞品风格）
+   ============================================================ */
+
+html, body, #app {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 品牌渐变主按钮 */
+.el-button--primary {
+  background: var(--grad-brand);
+  border: none;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+  transition: filter 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+.el-button--primary:hover,
+.el-button--primary:focus {
+  background: var(--grad-brand);
+  filter: brightness(1.06);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+}
+.el-button--primary:active {
+  transform: translateY(1px);
+}
+.el-button--primary.is-disabled {
+  background: var(--grad-brand);
+  opacity: 0.5;
+}
+
+/* 输入框 / 文本域 / 选择框精致化 */
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  border-radius: 8px;
+  transition: box-shadow 0.2s;
+}
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused {
+  box-shadow: 0 0 0 1px var(--el-color-primary) inset, 0 0 0 3px var(--accent-soft);
+}
+
+/* 弹窗 / 消息更柔和圆润 */
+.el-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 86vh;
+  margin: 4vh auto 4vh;
+  border-radius: 16px;
+  box-shadow: var(--el-box-shadow-dark);
+  overflow: hidden;
+}
+.el-dialog__header,
+.el-dialog__footer {
+  flex-shrink: 0;
+}
+.el-dialog__header {
+  position: relative; /* 让关闭按钮相对 header 定位（修复被 header 遮挡无法点击） */
+  padding-bottom: 12px;
+}
+.el-dialog__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* 弹窗关闭按钮：相对 header 垂直居中 + 加大热区 + hover 反馈 + 提升层级确保可点 */
+.el-dialog__headerbtn {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+.el-dialog__headerbtn:hover {
+  background: var(--accent);
+}
+.el-dialog__headerbtn:hover .el-dialog__close {
+  color: #fff;
+}
+.el-dialog__headerbtn .el-dialog__close {
+  font-size: 18px;
+}
+.el-message-box__headerbtn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+.el-message-box__headerbtn:hover {
+  background: var(--accent);
+}
+.el-message-box__headerbtn:hover .el-message-box__close {
+  color: #fff;
+}
+.el-message-box__headerbtn .el-message-box__close {
+  font-size: 18px;
+}
+.el-message-box {
+  border-radius: 14px;
+}
+.el-message {
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+}
+
+/* 卡片 / 下拉 / 标签圆角统一 */
+.el-card {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.el-popper.is-light,
+.el-popper.is-dark,
+.el-dropdown-menu {
+  border-radius: 12px;
+}
+.el-tag {
+  border-radius: 6px;
+}
+.el-tabs__item {
+  border-radius: 8px;
+}
+.el-notification {
+  border-radius: 12px;
+}
+
+/* 选中文本品牌色 */
+::selection {
+  background: var(--accent-soft);
+  color: inherit;
 }
 
 .el-menu-item-group__title {

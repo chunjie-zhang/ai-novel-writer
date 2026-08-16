@@ -15,12 +15,18 @@
     if (savedProj) window.__PROJ_STORE__ = JSON.parse(savedProj);
   } catch (e) {}
 
-  // 章节存储（模拟项目内 chapters/）
+  // 章节存储（模拟项目内 chapters/，用 localStorage 持久化跨 reload）
+  const CH_KEY = '__MOCK_CH_JSON__';
   window.__CHAPTERS_STORE__ = {};
+  try {
+    const savedCh = localStorage.getItem(CH_KEY);
+    if (savedCh) window.__CHAPTERS_STORE__ = JSON.parse(savedCh);
+  } catch (e) {}
 
   function persist() {
     try { localStorage.setItem(KEY, JSON.stringify(window.__REF_STORE__)); } catch (e) {}
     try { localStorage.setItem(PROJ_KEY, JSON.stringify(window.__PROJ_STORE__)); } catch (e) {}
+    try { localStorage.setItem(CH_KEY, JSON.stringify(window.__CHAPTERS_STORE__ || {})); } catch (e) {}
   }
 
   window.__TAURI_INTERNALS__ = {
@@ -33,6 +39,58 @@
       switch (cmd) {
         case 'list_projects':
           return window.__PROJ_STORE__ || [];
+        case 'create_project': {
+          const np = {
+            id: 'p_' + Math.random().toString(36).slice(2, 10),
+            name: args.name,
+            description: args.description || '',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            storage_path: null,
+          };
+          window.__PROJ_STORE__ = window.__PROJ_STORE__ || [];
+          window.__PROJ_STORE__.unshift(np);
+          return np;
+        }
+        case 'delete_chapter': {
+          delete window.__CHAPTERS_STORE__[args.fileName];
+          persist();
+          return null;
+        }
+        case 'rename_chapter': {
+          if (window.__CHAPTERS_STORE__ && window.__CHAPTERS_STORE__[args.oldName]) {
+            const c = window.__CHAPTERS_STORE__[args.oldName];
+            delete window.__CHAPTERS_STORE__[args.oldName];
+            window.__CHAPTERS_STORE__[args.newName] = c;
+          }
+          persist();
+          return null;
+        }
+        case 'list_backups':
+          window.__BACKUP_STORE__ = window.__BACKUP_STORE__ || {};
+          return window.__BACKUP_STORE__[args.projectId] || [];
+        case 'backup_project': {
+          window.__BACKUP_STORE__ = window.__BACKUP_STORE__ || {};
+          if (!window.__BACKUP_STORE__[args.projectId]) window.__BACKUP_STORE__[args.projectId] = [];
+          const ts = new Date();
+          const pad = (n) => String(n).padStart(2, '0');
+          const name = `${args.projectId}_${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}_${Math.random().toString(36).slice(2, 6)}`;
+          window.__BACKUP_STORE__[args.projectId].unshift(name);
+          return name;
+        }
+        case 'restore_backup':
+          return null;
+        case 'delete_backup':
+          window.__BACKUP_STORE__ = window.__BACKUP_STORE__ || {};
+          window.__BACKUP_STORE__[args.projectId] = (window.__BACKUP_STORE__[args.projectId] || []).filter((n) => n !== args.backupName);
+          return null;
+        case 'save_character':
+        case 'delete_character':
+        case 'update_project_info':
+        case 'save_world':
+          return null;
+        case 'get_skills_dir_path':
+          return '/mock/skills';
         case 'get_project_structure': {
           const proj = (window.__PROJ_STORE__ || []).find(p => p.id === args.projectId);
           const chapters = Object.entries(window.__CHAPTERS_STORE__ || {})
@@ -41,11 +99,26 @@
               word_count: (c.content || '').replace(/\s/g, '').length,
               created_at: '', updated_at: '',
             }));
-          return { id: args.projectId, name: proj?.name || '', chapters, volumes: [], characters: [], world_setting: null, memories: [] };
+          return {
+            project: {
+              id: args.projectId,
+              name: proj?.name || '',
+              description: proj?.description || '',
+              created_at: proj?.created_at || '',
+              updated_at: proj?.updated_at || '',
+              storage_path: proj?.storage_path || null,
+            },
+            chapters,
+            groups: [],
+            characters: [],
+            world_setting: null,
+            memories: [],
+          };
         }
         case 'save_chapter': {
           window.__CHAPTERS_STORE__ = window.__CHAPTERS_STORE__ || {};
           window.__CHAPTERS_STORE__[args.chapterTitle + '.md'] = { title: args.chapterTitle, content: args.content };
+          persist();
           return null;
         }
         case 'read_chapter': {

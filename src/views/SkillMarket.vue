@@ -102,7 +102,6 @@
               <el-button
                 size="small"
                 :type="skillStore.activeSkillIds.includes(skill.id) ? 'success' : 'primary'"
-                :plain="!skillStore.activeSkillIds.includes(skill.id)"
                 @click="applySkill(skill)"
               >
                 {{ skillStore.activeSkillIds.includes(skill.id) ? '使用中' : '使用' }}
@@ -167,7 +166,6 @@
               <el-button
                 size="small"
                 :type="skillStore.activeSkillIds.includes(skill.id) ? 'success' : 'primary'"
-                :plain="!skillStore.activeSkillIds.includes(skill.id)"
                 @click="applySkill(skill)"
               >
                 {{ skillStore.activeSkillIds.includes(skill.id) ? '使用中' : '使用' }}
