@@ -361,23 +361,23 @@ html, body, #app {
   text-rendering: optimizeLegibility;
 }
 
-/* 品牌渐变主按钮 */
-.el-button--primary {
+/* 品牌渐变主按钮（仅实心主按钮；排除 is-text/is-plain，避免渐变阴影误加到文字按钮上导致文字与背景融合） */
+.el-button--primary:not(.is-text):not(.is-plain) {
   background: var(--grad-brand);
   border: none;
   box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
   transition: filter 0.2s, box-shadow 0.2s, transform 0.1s;
 }
-.el-button--primary:hover,
-.el-button--primary:focus {
+.el-button--primary:not(.is-text):not(.is-plain):hover,
+.el-button--primary:not(.is-text):not(.is-plain):focus {
   background: var(--grad-brand);
   filter: brightness(1.06);
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
-.el-button--primary:active {
+.el-button--primary:not(.is-text):not(.is-plain):active {
   transform: translateY(1px);
 }
-.el-button--primary.is-disabled {
+.el-button--primary:not(.is-text):not(.is-plain).is-disabled {
   background: var(--grad-brand);
   opacity: 0.5;
 }
@@ -417,20 +417,25 @@ html, body, #app {
   min-height: 0;
   overflow-y: auto;
 }
-/* 弹窗关闭按钮：相对 header 垂直居中 + 加大热区 + hover 反馈 + 提升层级确保可点 */
+/* 弹窗关闭按钮：相对 header 垂直居中（用 margin-top 计算代替 transform，兼容性更好）
+   + 加大热区 + hover 反馈 + 提升层级确保可点 */
 .el-dialog__headerbtn {
   position: absolute;
   top: 50%;
-  right: 14px;
-  transform: translateY(-50%);
+  right: 8px;
+  margin-top: -20px; /* 40px 高度的一半，垂直居中 */
   z-index: 10;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   transition: background 0.2s;
+}
+.el-dialog__headerbtn .el-icon,
+.el-dialog__headerbtn .el-dialog__close {
+  pointer-events: none; /* 确保 hover/点击落在按钮本身，避免被图标拦截 */
 }
 .el-dialog__headerbtn:hover {
   background: var(--accent);

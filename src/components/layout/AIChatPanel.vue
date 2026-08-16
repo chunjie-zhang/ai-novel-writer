@@ -137,9 +137,16 @@
         <p>AI 创作助手</p>
         <p class="hint-sub">
           <template v-if="skillStore.activeSkills.length">
-            当前技能：<template v-for="(s, i) in skillStore.activeSkills" :key="s.id">
-              <Icon v-if="s.icon" :icon="s.icon" :width="14" :height="14" style="vertical-align:-2px" />{{ s.name }}<template v-if="i < skillStore.activeSkills.length - 1">、</template>
-            </template>
+            <span class="hint-skill-title">当前技能：</span>
+            <span
+              v-for="(s, i) in skillStore.activeSkills"
+              :key="s.id"
+              class="hint-skill-item"
+            >
+              <Icon v-if="s.icon" :icon="s.icon" :width="13" :height="13" class="hint-skill-icon" />
+              <span v-else class="hint-skill-icon">{{ s.emoji }}</span>
+              <span class="hint-skill-name">{{ s.name }}</span>
+            </span>
           </template>
           <template v-else>
             输入 @ 快速选择技能，或直接输入需求<br />
@@ -1865,6 +1872,34 @@ onMounted(() => {
   margin-top: 8px !important;
 }
 
+/* 默认助手界面「当前技能」：品牌紫小胶囊 + 图标文字一行垂直居中 */
+.hint-skill-title {
+  color: var(--text-3);
+  margin-right: 4px;
+}
+.hint-skill-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px 2px 8px;
+  margin: 2px 4px 2px 0;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.hint-skill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hint-skill-name {
+  white-space: nowrap;
+  font-weight: 500;
+}
+
 .suggestions {
   display: flex;
   flex-wrap: wrap;
@@ -1942,6 +1977,16 @@ onMounted(() => {
   margin-top: 4px;
   display: flex;
   gap: 8px;
+}
+/* 对话操作按钮 hover：实色品牌紫底 + 白字，避免浅紫底紫字对比度不足、文字与背景融合 */
+.message-actions :deep(.el-button:hover),
+.message-actions :deep(.el-button:focus) {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+.message-actions :deep(.el-button:hover .el-icon),
+.message-actions :deep(.el-button:focus .el-icon) {
+  color: #fff !important;
 }
 
 .thinking-dots {

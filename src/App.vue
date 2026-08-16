@@ -467,9 +467,12 @@ onBeforeUnmount(() => {
   color: var(--accent);
   transition: background 0.2s, color 0.2s;
 }
-.header-action:hover {
-  background: var(--accent);
-  color: #fff;
+/* 覆盖 Element Plus .el-button.is-text:not(.is-disabled):hover 的同级特异性背景，
+   否则 hover 时背景停在淡色 accent-soft、文字变白 → 白字浅底看不清 */
+.header-action:hover,
+.header-action:focus {
+  background: var(--accent) !important;
+  color: #fff !important;
 }
 .header-action-label {
   font-size: 13px;
@@ -482,7 +485,7 @@ onBeforeUnmount(() => {
   display: flex;
   overflow: hidden;
   padding: 10px;
-  gap: 10px;
+  gap: 3px;
   background: var(--app-bg);
 }
 
@@ -503,7 +506,7 @@ onBeforeUnmount(() => {
 /* 拖拽分隔条 */
 .resize-handle {
   flex-shrink: 0;
-  width: 6px;
+  width: 5px;
   cursor: col-resize;
   background: transparent;
   border-radius: 3px;

@@ -7,6 +7,7 @@ import { Icon } from "@iconify/vue";
 import App from "./App.vue";
 import router from "./router";
 import "./style.css";
+import "./utils/icons"; // 内置离线 lucide 图标集（不依赖远程 API）
 
 const app = createApp(App);
 

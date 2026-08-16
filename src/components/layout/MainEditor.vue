@@ -75,6 +75,7 @@
               @click="toggleFocusMode"
             >
               <el-icon><Icon icon="lucide:maximize-2" /></el-icon>
+              <span>专注</span>
             </el-button>
           </el-tooltip>
 
@@ -82,6 +83,7 @@
           <el-dropdown trigger="click" @command="handleToolCommand">
             <el-button size="small">
               <el-icon><Icon icon="lucide:ellipsis" /></el-icon>
+              <span>工具</span>
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
