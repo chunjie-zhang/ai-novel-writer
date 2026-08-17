@@ -4,12 +4,12 @@
       <span class="tree-title">项目列表</span>
       <div class="tree-header-actions">
         <el-tooltip content="大纲管理" placement="bottom">
-          <el-button text size="small" @click="showOutline = !showOutline" :type="showOutline ? 'primary' : ''">
+          <el-button text size="small" @click="showOutline = true" :type="showOutline ? 'primary' : ''">
             <el-icon><Icon icon="lucide:list-tree" /></el-icon>
           </el-button>
         </el-tooltip>
         <el-tooltip content="备份管理" placement="bottom">
-          <el-button text size="small" @click="showBackup = !showBackup" :type="showBackup ? 'primary' : ''">
+          <el-button text size="small" @click="showBackup = true" :type="showBackup ? 'primary' : ''">
             <el-icon><Icon icon="lucide:database-backup" /></el-icon>
           </el-button>
         </el-tooltip>
@@ -21,15 +21,15 @@
       </div>
     </div>
 
-    <!-- 大纲面板 -->
-    <div v-if="showOutline" class="outline-section">
+    <!-- 大纲管理弹窗 -->
+    <el-dialog v-model="showOutline" title="大纲管理" width="640px" destroy-on-close>
       <OutlinePanel @close="showOutline = false" />
-    </div>
+    </el-dialog>
 
-    <!-- 备份面板 -->
-    <div v-if="showBackup" class="outline-section">
+    <!-- 备份管理弹窗 -->
+    <el-dialog v-model="showBackup" title="备份管理" width="560px" destroy-on-close>
       <BackupManager :project-id="projectStore.currentProject?.id || ''" />
-    </div>
+    </el-dialog>
 
     <!-- 项目列表 -->
     <div v-if="projectStore.projects.length === 0" class="empty-state">

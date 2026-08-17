@@ -1,7 +1,6 @@
 <template>
   <div class="backup-manager">
     <div class="bm-header">
-      <h3><el-icon style="vertical-align:-2px"><Icon icon="lucide:hard-drive" /></el-icon> 备份管理</h3>
       <div class="bm-header-actions">
         <el-switch
           v-model="autoBackup"
