@@ -908,7 +908,7 @@ function createNewProject() {
   align-items: center;
   justify-content: center;
   height: 100%;
-  background: radial-gradient(1200px 600px at 50% 0%, #20263a 0%, var(--app-bg) 60%);
+  background: radial-gradient(1200px 600px at 50% 0%, var(--welcome-glow) 0%, var(--app-bg) 60%);
 }
 
 .welcome-content {
@@ -926,9 +926,10 @@ function createNewProject() {
   width: 96px;
   height: 96px;
   border-radius: 28px;
-  background: linear-gradient(135deg, rgba(77, 141, 255, 0.22), rgba(77, 141, 255, 0.06));
-  border: 1px solid rgba(77, 141, 255, 0.35);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  color: var(--accent);
+  background: linear-gradient(135deg, var(--accent-soft), rgba(99, 102, 241, 0.04));
+  border: 1px solid var(--accent-soft);
+  box-shadow: var(--shadow-md);
 }
 
 .welcome-content h1 {

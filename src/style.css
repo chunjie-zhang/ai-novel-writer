@@ -65,6 +65,7 @@
   --shadow-md: 0 2px 6px rgba(20, 22, 40, 0.06), 0 12px 32px rgba(20, 22, 40, 0.09);
   --shadow-lg: 0 8px 24px rgba(20, 22, 40, 0.12), 0 24px 64px rgba(20, 22, 40, 0.14);
   --grad-brand: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --welcome-glow: #e3e8ff; /* 欢迎页顶部柔光（浅色·淡蓝紫） */
 
   /* ---- Element Plus 变量覆盖（浅色 · UI v2） ---- */
   --el-color-primary: #6366f1;
@@ -190,6 +191,7 @@
   --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.3), 0 12px 32px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 24px 64px rgba(0, 0, 0, 0.45);
   --grad-brand: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
+  --welcome-glow: #20263a; /* 欢迎页顶部柔光（深色） */
 
   /* ---- Element Plus 变量覆盖（深色 · UI v2） ---- */
   --el-color-primary: #818cf8;
