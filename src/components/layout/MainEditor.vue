@@ -260,6 +260,12 @@
       @apply-at-cursor="handleApplyAtCursor"
     />
 
+    <!-- 多智能体分析对话框 -->
+    <MultiAgentDialog
+      v-model:visible="showMultiAgent"
+      :content="editorStore.content"
+    />
+
     <!-- 日更目标设置对话框 -->
     <el-dialog v-model="showGoalDialog" title="日更目标" width="400px">
       <el-form label-width="100px">
@@ -307,6 +313,8 @@ import RhythmCheckDialog from "@/components/novel/RhythmCheckDialog.vue";
 import DedupDialog from "@/components/novel/DedupDialog.vue";
 import VersionHistoryDialog from "@/components/novel/VersionHistoryDialog.vue";
 import OutlineToTextDialog from "@/components/novel/OutlineToTextDialog.vue";
+import MultiAgentDialog from "@/components/novel/MultiAgentDialog.vue";
+import { renderMarkdown as renderStreamMarkdown } from "@/utils/markdown";
 
 const projectStore = useProjectStore();
 const editorStore = useEditorStore();
@@ -320,6 +328,7 @@ const showRhythmDialog = ref(false);
 const showDedupDialog = ref(false);
 const showVersionHistoryDialog = ref(false);
 const showOutlineToTextDialog = ref(false);
+const showMultiAgent = ref(false);
 const newChapterTitle = ref("");
 const newChapterGroup = ref("");
 // 当前项目已有的分组（含已创建的空卷，供下拉选择）
@@ -370,7 +379,7 @@ function handleToolCommand(cmd: string) {
     case "outline-detail": handleOutlineDetail(); break;
     case "outline-to-text": handleOutlineToText(); break;
     case "version-history": handleVersionHistory(); break;
-    case "multi-agent": handleMultiAgent(); break;
+    case "multi-agent": showMultiAgent.value = true; break;
   }
 }
 
@@ -489,66 +498,6 @@ const streamTargetLabel = computed(() => {
   return "";
 });
 
-/** 极简 Markdown 渲染（流式预览用）：处理标题/段落/列表/引用/代码块/粗斜体，转义 HTML 防 XSS */
-function renderStreamMarkdown(text: string): string {
-  const escapeHtml = (s: string) =>
-    s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  const inline = (s: string) =>
-    s
-      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-      .replace(/`([^`]+)`/g, "<code>$1</code>");
-  const lines = escapeHtml(text).split("\n");
-  const out: string[] = [];
-  let inCode = false;
-  let codeBuf: string[] = [];
-  let listBuf: string[] = [];
-  const flushList = () => {
-    if (listBuf.length) {
-      out.push(`<ul>${listBuf.map((li) => `<li>${li}</li>`).join("")}</ul>`);
-      listBuf = [];
-    }
-  };
-  for (const raw of lines) {
-    const line = raw;
-    if (line.trim().startsWith("```")) {
-      flushList();
-      if (inCode) {
-        out.push(`<pre><code>${codeBuf.join("\n")}</code></pre>`);
-        codeBuf = [];
-        inCode = false;
-      } else {
-        inCode = true;
-      }
-      continue;
-    }
-    if (inCode) { codeBuf.push(line); continue; }
-    if (/^#{1,6}\s/.test(line)) {
-      flushList();
-      const level = line.match(/^#+/)![0].length;
-      const content = inline(line.replace(/^#+\s*/, ""));
-      out.push(`<h${Math.min(level, 6)}>${content}</h${Math.min(level, 6)}>`);
-    } else if (/^\s*[-*+]\s+/.test(line)) {
-      listBuf.push(inline(line.replace(/^\s*[-*+]\s+/, "")));
-    } else if (/^\s*>\s?/.test(line)) {
-      flushList();
-      out.push(`<blockquote>${inline(line.replace(/^\s*>\s?/, ""))}</blockquote>`);
-    } else if (line.trim() === "") {
-      flushList();
-    } else {
-      flushList();
-      out.push(`<p>${inline(line)}</p>`);
-    }
-  }
-  flushList();
-  if (inCode) out.push(`<pre><code>${codeBuf.join("\n")}</code></pre>`);
-  return out.join("\n");
-}
 // 标题栏输入框内容 = 章节标题去掉「第N章」前缀
 watch(
   () => editorStore.chapterTitle,
@@ -856,36 +805,6 @@ function handleApplyAtCursor(text: string) {
     editorStore.insertContent("\n\n" + text);
   }
   ElMessage.success("已插入，请记得保存");
-}
-
-/** 多智能体分析 */
-async function handleMultiAgent() {
-  const content = editorStore.content;
-  if (!content.trim()) {
-    ElMessage.warning("当前章节为空");
-    return;
-  }
-  try {
-    ElMessage.info("多智能体分析中（剧情策划 + 人设校验 + 文笔润色 + 逻辑纠错）...");
-
-    // 并行调用多个 Agent
-    const [plotResult, characterResult, polishResult, logicResult] = await Promise.allSettled([
-      aiStore.sendMessage(`你是一位【剧情策划师】。分析以下内容的剧情结构：\n\n${content.slice(0, 2000)}\n\n请评分(1-10)并给出改进建议。`),
-      aiStore.sendMessage(`你是一位【人设校验官】。检查以下内容中角色行为是否OOC：\n\n${content.slice(0, 2000)}`),
-      aiStore.sendMessage(`你是一位【文笔润色师】。评估以下内容的文笔质量：\n\n${content.slice(0, 2000)}\n\n请评分并给出具体改进建议。`),
-      aiStore.sendMessage(`你是一位【逻辑纠错师】。检查以下内容的逻辑问题：\n\n${content.slice(0, 2000)}`),
-    ]);
-
-    const parts = [];
-    if (plotResult.status === "fulfilled") parts.push(`【剧情策划】\n${plotResult.value.slice(0, 300)}`);
-    if (characterResult.status === "fulfilled") parts.push(`【人设校验】\n${characterResult.value.slice(0, 300)}`);
-    if (polishResult.status === "fulfilled") parts.push(`【文笔润色】\n${polishResult.value.slice(0, 300)}`);
-    if (logicResult.status === "fulfilled") parts.push(`【逻辑纠错】\n${logicResult.value.slice(0, 300)}`);
-
-    ElMessageBox.alert(parts.join("\n\n---\n\n"), "多智能体分析报告");
-  } catch (e) {
-    ElMessage.error("分析失败: " + e);
-  }
 }
 
 function createNewProject() {

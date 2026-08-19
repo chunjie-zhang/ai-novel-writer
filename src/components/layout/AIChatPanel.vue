@@ -139,7 +139,7 @@
           <template v-if="skillStore.activeSkills.length">
             <span class="hint-skill-title">当前技能：</span>
             <span
-              v-for="(s, i) in skillStore.activeSkills"
+              v-for="s in skillStore.activeSkills"
               :key="s.id"
               class="hint-skill-item"
             >
