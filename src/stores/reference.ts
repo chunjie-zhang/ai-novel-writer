@@ -187,15 +187,24 @@ export const useReferenceStore = defineStore("reference", () => {
         ? chapters.value.filter((c) => selectedChapters.value.includes(c.index))
         : chapters.value.slice(0, 3);
 
-      // 样本保护：全选/章节过多时自动截取前 N 章，避免拼接超出模型上下文导致分析失败
-      const MAX_SAMPLE = 30;
-      if (sampleChapters.length > MAX_SAMPLE) {
-        sampleChapters = sampleChapters.slice(0, MAX_SAMPLE);
-        ElMessage.info(`章节过多，已自动选取前 ${MAX_SAMPLE} 章作为分析样本以保证分析质量`);
+      // 按上下文容量动态取样本（不固定章数）：每章截取一段，总字符不超预算，尽量覆盖更多章节
+      const MAX_SAMPLE_CHARS = 90000; // 总样本字符预算（约 4.5 万汉字，可安全容纳于模型上下文）
+      const MAX_PER_CHAPTER = 1000;   // 每章截取字符数
+      let budget = 0;
+      const fitted: typeof sampleChapters = [];
+      for (const c of sampleChapters) {
+        const len = c.title.length + Math.min(c.content.length, MAX_PER_CHAPTER) + 10;
+        if (budget + len > MAX_SAMPLE_CHARS && fitted.length > 0) break;
+        fitted.push(c);
+        budget += len;
+      }
+      if (fitted.length !== sampleChapters.length) {
+        sampleChapters = fitted;
+        ElMessage.info(`章节较多，已自动选取前 ${fitted.length} 章（按上下文容量）以保证分析质量`);
       }
 
       const sampleContent = sampleChapters
-        .map((c) => `【${c.title}】\n${c.content.slice(0, 2000)}`)
+        .map((c) => `【${c.title}】\n${c.content.slice(0, MAX_PER_CHAPTER)}`)
         .join("\n\n");
 
       const aiStore = useAIStore();

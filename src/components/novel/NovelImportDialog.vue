@@ -230,7 +230,7 @@
             type="primary"
             @click="handleConfirm"
           >
-            确认使用 {{ confirmLabel }}
+            确认使用
           </el-button>
         </div>
       </div>
@@ -255,11 +255,6 @@ const visible = defineModel<boolean>("visible");
 
 /** 是否有已选技能 */
 const hasSelection = computed(() => skillStore.activeSkills.length > 0);
-
-/** 确认按钮文案：已选技能名 */
-const confirmLabel = computed(() =>
-  skillStore.activeSkills.map((s) => s.name).join("、")
-);
 
 /** 切换技能选中状态（追加/取消） */
 function toggleSkillSelect(skill: any) {
