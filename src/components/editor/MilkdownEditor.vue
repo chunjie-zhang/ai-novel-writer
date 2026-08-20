@@ -64,7 +64,8 @@ defineExpose({ getSelectionText, replaceSelection, applyCursorRestore });
 :deep(.milkdown) {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: 16px;
-  line-height: 1.85;
+  /* 行高收紧：光标（caret）高度 = 行框高度，行高越小光标/选区越紧凑精致 */
+  line-height: 1.7;
   color: var(--text-1);
   max-width: 720px;
   margin: 0 auto;

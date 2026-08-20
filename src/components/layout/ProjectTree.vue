@@ -518,6 +518,8 @@ async function handleDeleteProject(proj: any) {
     return;
   }
 
+  // 记录被删除项目是否为当前打开的项目（删除成功后需清理编辑器状态，避免新建同名小说时残留旧章节）
+  const wasCurrentProject = projectStore.currentProject?.id === proj.id;
   try {
     await projectStore.deleteProject(proj.id);
     useVersionsStore().clearProject(proj.id);
@@ -525,6 +527,10 @@ async function handleDeleteProject(proj: any) {
     const refStore = useReferenceStore();
     if (refStore.hasReference && refStore.referenceNovel?.title === proj.name) {
       refStore.clear();
+    }
+    // 删除的是当前打开的项目时，清理编辑器残留（章节 / 正文 / 光标），防止再建同名小说时中间展示旧内容
+    if (wasCurrentProject) {
+      editorStore.closeChapter();
     }
     ElMessage.success(`已删除小说「${proj.name}」`);
   } catch (e) {
