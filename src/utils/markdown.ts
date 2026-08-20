@@ -1,7 +1,7 @@
 /**
  * 极简 Markdown 渲染器（AI 流式预览 / 分析报告展示共用）
  *
- * 处理：标题 / 段落 / 无序列表 / 有序列表 / 引用 / 代码块 / 粗体 / 斜体 / 行内代码 / 水平线。
+ * 处理：标题 / 段落 / 无序列表 / 有序列表 / 引用 / 代码块 / 粗体 / 斜体 / 行内代码 / 水平线 / 表格。
  * 所有输入先 HTML 转义再渲染，防止 XSS。
  */
 export function renderMarkdown(text: string): string {
@@ -38,8 +38,28 @@ export function renderMarkdown(text: string): string {
     }
   };
 
-  for (const raw of lines) {
-    const line = raw;
+  // ===== 表格（GitHub 风格：| 列 | 列 | + 分隔行 |---|） =====
+  const isTableSep = (line: string) =>
+    /^\s*\|[\s:|-]*\|\s*$/.test(line) && line.includes("-");
+  const parseTableRow = (line: string) =>
+    line
+      .trim()
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((c) => inline(c.trim()));
+  const renderTable = (headers: string[], rows: string[][]) => {
+    const thead = `<thead><tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr></thead>`;
+    const tbody = rows.length
+      ? `<tbody>${rows
+          .map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`)
+          .join("")}</tbody>`
+      : "";
+    return `<table>${thead}${tbody}</table>`;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const trimmed = line.trim();
 
     if (trimmed.startsWith("```")) {
@@ -55,6 +75,22 @@ export function renderMarkdown(text: string): string {
     }
     if (inCode) {
       codeBuf.push(escapeHtml(line));
+      continue;
+    }
+    // 表格：当前行以 | 开头且下一行是分隔行
+    if (trimmed.startsWith("|") && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      flushList();
+      const headers = parseTableRow(line);
+      i += 2; // 跳过表头行与分隔行
+      const rows: string[][] = [];
+      while (i < lines.length) {
+        const r = lines[i].trim();
+        if (!r.startsWith("|")) break;
+        rows.push(parseTableRow(r));
+        i++;
+      }
+      i--; // 抵消 for 自增，让循环回到首个非表格行
+      out.push(renderTable(headers, rows));
       continue;
     }
     if (/^#{1,6}\s/.test(line)) {

@@ -1,13 +1,20 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="🤖 多智能体分析报告"
     width="720px"
     top="5vh"
     append-to-body
     destroy-on-close
     class="ma-dialog"
   >
+    <template #header>
+      <div class="ma-dialog-title">
+        <span class="ma-dialog-ico">
+          <Icon icon="lucide:bot" :width="16" :height="16" />
+        </span>
+        <span>多智能体分析报告</span>
+      </div>
+    </template>
     <!-- 头部总览 -->
     <div class="ma-head">
       <div class="ma-head-title">AI 多智能体联合会诊</div>
@@ -207,6 +214,26 @@ async function startAnalyze() {
 </script>
 
 <style scoped>
+.ma-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.ma-dialog-ico {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  flex-shrink: 0;
+}
+
 .ma-head {
   background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-2, var(--accent-soft)));
   border: 1px solid var(--border);
@@ -399,6 +426,34 @@ async function startAnalyze() {
   margin: 12px 0;
 }
 .ma-report-body :deep(strong) {
+  color: var(--text-1);
+}
+
+/* 表格 */
+.ma-report-body :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.ma-report-body :deep(th),
+.ma-report-body :deep(td) {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.ma-report-body :deep(th) {
+  background: var(--accent-soft);
+  color: var(--text-1);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ma-report-body :deep(tbody tr:nth-child(even)) {
+  background: var(--panel-bg-3, var(--border));
+}
+.ma-report-body :deep(td strong) {
   color: var(--text-1);
 }
 
