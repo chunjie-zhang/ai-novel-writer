@@ -129,12 +129,25 @@ defineExpose({ getSelectionText, replaceSelection, applyCursorRestore });
   font-size: 0.9em;
 }
 
-/* 光标与选区在深色下可见 */
-:deep(.milkdown .ProseMirror-selectednode) {
-  outline: 1px solid var(--accent);
+/* 光标与选区：统一品牌色，聚焦更清晰美观（深浅主题均适用） */
+:deep(.milkdown .ProseMirror) {
+  caret-color: var(--accent);
 }
-
+:deep(.milkdown .ProseMirror-selectednode) {
+  outline: 1.5px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 :deep(.milkdown ::selection) {
   background: var(--accent-soft);
+  color: inherit;
+}
+/* 段落空隙处的块状光标（gapcursor）统一为品牌竖条，避免深浅不一的默认样式 */
+:deep(.milkdown .ProseMirror-gapcursor) {
+  border-left: 2px solid var(--accent);
+}
+:deep(.milkdown .ProseMirror-gapcursor span) {
+  width: 2px;
+  background: var(--accent);
 }
 </style>
