@@ -320,7 +320,7 @@
               <span class="ooc-detail-sub">角色行为与设定一致性检查报告</span>
             </div>
           </div>
-          <pre>{{ showOOCResult }}</pre>
+          <div class="ooc-rendered" v-html="renderMarkdown(showOOCResult)"></div>
         </div>
       </div>
       <template #footer>
@@ -348,6 +348,7 @@ import { useTemplateStore } from "@/stores/templates";
 import { buildSmartContext } from "@/utils/nlp";
 import { extractJsonContent } from "@/utils/ai";
 import { normalizeChapterTitle, chineseToArabic } from "@/utils/chapterTitle";
+import { renderMarkdown } from "@/utils/markdown";
 
 const aiStore = useAIStore();
 const skillStore = useSkillStore();
@@ -545,6 +546,9 @@ async function handleSend() {
     );
     if (needReference && refStore.hasReference) {
       systemPrompt = `${systemPrompt}\n\n${refStore.referenceContext}`;
+      // 仿写类技能：正在创作一本全新的小说，章节一律从第 1 章开始连续编号，
+      // 不要沿用参考小说的章节编号，也不要从中间章节开始写（否则会生成「第9章」这类编号）
+      systemPrompt = `${systemPrompt}\n\n【章节编号要求】\n正在创作一本全新的小说，所有章节从第 1 章开始连续编号。仿写参考小说时，新书第 1 章对应参考小说开篇，不要沿用参考小说的章节编号，也不要从中间章节开始写。`;
     }
   }
 
@@ -697,10 +701,10 @@ function extractChapterCount(text: string): number {
   return chineseToArabic(raw) || 0;
 }
 
-/** 目标小说已有章节的最大「第N章」编号（标题非编号格式则用章节数量兜底） */
-function maxExistingChapterNum(): number {
+/** 计算章节列表中最大的「第N章」编号（标题非编号格式返回 0） */
+function maxChapterNumOf(chapters: { title?: string }[]): number {
   let max = 0;
-  for (const c of projectStore.chapters) {
+  for (const c of chapters) {
     const m = String(c.title || "").match(/第\s*([0-9一二三四五六七八九十百千零两]+)\s*[章节篇回]/);
     if (m) {
       const n = chineseToArabic(m[1].trim());
@@ -759,20 +763,38 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
     const MAX_BATCH_TOKENS = 16000; // 单次输出安全上限
     // 逐章续写：每批只生成 1 章（用户要求一章一章生成，避免多章合批导致每章字数幅度超标、字数不可控）
     const BATCH = 1;
-    // 起始章号 = 目标小说已有章节的最大编号 + 1（无则从 1 开始），避免从第 1 章重写
-    const startChapter = Math.max(maxExistingChapterNum(), projectStore.chapters.length) + 1;
-    // 已有章节标题（作为衔接上下文；只保留最后一章标题用于衔接）
-    const existingTitles = projectStore.chapters.map((c) => c.title).filter(Boolean);
+    // 输出目标小说的章节列表（起始章号 / 衔接上下文应基于「输出目标小说」，而非当前打开的项目——两者可能不是同一本）
+    let targetChapters: { title: string; file_name: string }[] = [];
+    try {
+      const struct = await invoke<any>("get_project_structure", { projectId });
+      targetChapters = Array.isArray(struct?.chapters) ? struct.chapters : [];
+    } catch (e) {
+      console.error("读取输出目标小说章节失败，回退到当前打开项目:", e);
+      targetChapters = projectStore.chapters;
+    }
+
+    // 仿写类技能（imitate-and-continue/imitate-style/reference-plot）：把参考小说从头仿写一遍 → 起始章号从第 1 章开始，不衔接目标小说已有章节
+    const isImitateSkill = skillStore.activeSkills.some(
+      (s) => s.id === "imitate-and-continue" || s.id === "imitate-style" || s.id === "reference-plot"
+    );
+    // 起始章号：仿写从头（1）开始；普通续写从「输出目标小说」已有章节的最大编号 + 1 开始（避免从第 1 章重写）
+    const startChapter = isImitateSkill
+      ? 1
+      : Math.max(maxChapterNumOf(targetChapters), targetChapters.length) + 1;
+    // 已有章节标题（作为衔接上下文；仿写场景视为新书，不衔接目标小说已有章节）
+    const existingTitles = isImitateSkill
+      ? []
+      : targetChapters.map((c) => c.title).filter(Boolean);
     const savedTitles: string[] = [...existingTitles];
     let written = 0;
     let guard = 0;
     const MAX_BATCHES = 100; // 最多 100 批（逐章时允许更多章），防止异常死循环
 
-    // 读取已有章节最后一章结尾内容，作为续写衔接上下文（让暂停后再次续写能真正接上剧情）
+    // 读取已有章节最后一章结尾内容，作为续写衔接上下文（让暂停后再次续写能真正接上剧情；仿写场景从头仿写不读取）
     let existingTail = "";
-    if (existingTitles.length > 0) {
+    if (!isImitateSkill && existingTitles.length > 0) {
       try {
-        const lastCh = projectStore.chapters[projectStore.chapters.length - 1];
+        const lastCh = targetChapters[targetChapters.length - 1];
         if (lastCh) {
           const c = await invoke<string>("read_chapter", {
             projectId,
@@ -2245,30 +2267,110 @@ onMounted(() => {
   color: var(--text-3);
 }
 
-/* 详情正文 */
-.ooc-dialog .ooc-detail pre {
-  margin: 0;
+/* 详情正文（Markdown 渲染） */
+.ooc-dialog .ooc-rendered {
   padding: 14px 16px;
-  font-family: var(--font-mono, ui-monospace, "SF Mono", Menlo, Consolas, monospace);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.75;
   color: var(--text-2);
-  white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: break-word;
   max-height: 320px;
   overflow-y: auto;
   flex: 1;
 }
-
-.ooc-dialog .ooc-detail pre::-webkit-scrollbar {
+.ooc-dialog .ooc-rendered h1,
+.ooc-dialog .ooc-rendered h2,
+.ooc-dialog .ooc-rendered h3,
+.ooc-dialog .ooc-rendered h4,
+.ooc-dialog .ooc-rendered h5,
+.ooc-dialog .ooc-rendered h6 {
+  color: var(--text-1);
+  margin: 12px 0 6px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.ooc-dialog .ooc-rendered h1 {
+  font-size: 15px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--border);
+}
+.ooc-dialog .ooc-rendered h2 {
+  font-size: 14px;
+}
+.ooc-dialog .ooc-rendered h3 {
+  font-size: 13px;
+}
+.ooc-dialog .ooc-rendered p {
+  margin: 6px 0;
+}
+.ooc-dialog .ooc-rendered ul,
+.ooc-dialog .ooc-rendered ol {
+  margin: 6px 0;
+  padding-left: 22px;
+}
+.ooc-dialog .ooc-rendered li {
+  margin: 3px 0;
+}
+.ooc-dialog .ooc-rendered blockquote {
+  margin: 8px 0;
+  padding: 6px 12px;
+  border-left: 3px solid var(--orange);
+  background: var(--orange-soft);
+  border-radius: 4px;
+}
+.ooc-dialog .ooc-rendered strong {
+  color: var(--orange);
+  font-weight: 600;
+}
+.ooc-dialog .ooc-rendered code {
+  background: var(--accent-soft);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--font-mono, ui-monospace, "SF Mono", Menlo, Consolas, monospace);
+  font-size: 12px;
+}
+.ooc-dialog .ooc-rendered pre {
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.ooc-dialog .ooc-rendered pre code {
+  background: transparent;
+  padding: 0;
+}
+.ooc-dialog .ooc-rendered hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 12px 0;
+}
+.ooc-dialog .ooc-rendered table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+}
+.ooc-dialog .ooc-rendered th,
+.ooc-dialog .ooc-rendered td {
+  border: 1px solid var(--border);
+  padding: 5px 8px;
+  text-align: left;
+  font-size: 12.5px;
+}
+.ooc-dialog .ooc-rendered th {
+  background: var(--panel-bg);
+  font-weight: 600;
+}
+.ooc-dialog .ooc-rendered::-webkit-scrollbar {
   width: 8px;
 }
-.ooc-dialog .ooc-detail pre::-webkit-scrollbar-thumb {
+.ooc-dialog .ooc-rendered::-webkit-scrollbar-thumb {
   background: var(--border-strong, rgba(128, 128, 128, 0.4));
   border-radius: 4px;
 }
-.ooc-dialog .ooc-detail pre::-webkit-scrollbar-track {
+.ooc-dialog .ooc-rendered::-webkit-scrollbar-track {
   background: transparent;
 }
 </style>
