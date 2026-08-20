@@ -7,6 +7,8 @@ export type WritingScene = "quick-write" | "polish" | "plot-idea" | "character-g
 export interface ScenePreset {
   label: string;
   emoji: string;
+  icon: string;
+  iconColor: string;
   desc: string;
   temperature: number;
   maxTokens: number;
@@ -17,6 +19,8 @@ export const SCENE_PRESETS: Record<WritingScene, ScenePreset> = {
   "quick-write": {
     label: "快速续写",
     emoji: "⚡",
+    icon: "lucide:zap",
+    iconColor: "linear-gradient(135deg,#f59e0b,#f97316)",
     desc: "延续剧情快速输出，创意优先",
     temperature: 0.9,
     maxTokens: 4096,
@@ -25,6 +29,8 @@ export const SCENE_PRESETS: Record<WritingScene, ScenePreset> = {
   polish: {
     label: "精细润色",
     emoji: "✨",
+    icon: "lucide:sparkles",
+    iconColor: "linear-gradient(135deg,#a855f7,#ec4899)",
     desc: "优化文笔措辞，提升语言质量",
     temperature: 0.4,
     maxTokens: 2048,
@@ -33,6 +39,8 @@ export const SCENE_PRESETS: Record<WritingScene, ScenePreset> = {
   "plot-idea": {
     label: "剧情构思",
     emoji: "💡",
+    icon: "lucide:lightbulb",
+    iconColor: "linear-gradient(135deg,#facc15,#f59e0b)",
     desc: "创意发散，拓展剧情方向",
     temperature: 1.2,
     maxTokens: 2048,
@@ -41,6 +49,8 @@ export const SCENE_PRESETS: Record<WritingScene, ScenePreset> = {
   "character-gen": {
     label: "人设生成",
     emoji: "👤",
+    icon: "lucide:user-round",
+    iconColor: "linear-gradient(135deg,#10b981,#14b8a6)",
     desc: "生成立体丰满的角色设定",
     temperature: 0.7,
     maxTokens: 2048,
@@ -49,6 +59,8 @@ export const SCENE_PRESETS: Record<WritingScene, ScenePreset> = {
   "logic-check": {
     label: "逻辑纠错",
     emoji: "🔍",
+    icon: "lucide:shield-check",
+    iconColor: "linear-gradient(135deg,#0ea5e9,#6366f1)",
     desc: "检查剧情漏洞和逻辑矛盾",
     temperature: 0.2,
     maxTokens: 2048,
@@ -57,6 +69,8 @@ export const SCENE_PRESETS: Record<WritingScene, ScenePreset> = {
   outline: {
     label: "大纲优化",
     emoji: "📋",
+    icon: "lucide:list-ordered",
+    iconColor: "linear-gradient(135deg,#6366f1,#8b5cf6)",
     desc: "梳理和优化故事大纲结构",
     temperature: 0.6,
     maxTokens: 3072,

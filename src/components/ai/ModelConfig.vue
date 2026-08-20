@@ -89,7 +89,9 @@
           :class="{ active: writingStore.activeScene === key }"
           @click="selectScene(key as WritingScene)"
         >
-          <span class="scene-emoji">{{ scene.emoji }}</span>
+          <span class="scene-icon" :style="{ background: scene.iconColor }">
+            <Icon :icon="scene.icon" :width="18" :height="18" />
+          </span>
           <div class="scene-info">
             <span class="scene-label">{{ scene.label }}</span>
             <span class="scene-desc">{{ scene.desc }}</span>
@@ -99,7 +101,10 @@
 
       <div v-if="writingStore.activeScene" class="scene-active-info">
         <el-tag size="small" type="success" effect="light" closable @close="writingStore.setScene(null)">
-          {{ writingStore.currentScene?.emoji }} {{ writingStore.currentScene?.label }}
+          <span style="display:inline-flex;align-items:center;gap:4px">
+            <Icon :icon="writingStore.currentScene?.icon || ''" :width="14" :height="14" />
+            {{ writingStore.currentScene?.label }}
+          </span>
         </el-tag>
         <span class="scene-params">
           Temperature {{ writingStore.currentScene?.temperature }} ·
@@ -335,9 +340,16 @@ async function handleTest() {
   background: var(--accent-soft);
 }
 
-.scene-emoji {
-  font-size: 20px;
+.scene-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .scene-info {
