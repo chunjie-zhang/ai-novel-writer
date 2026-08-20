@@ -136,7 +136,7 @@ const steps = [
     points: [
       { icon: "lucide:folder-tree", text: "左侧 · 项目树：项目管理、章节列表，以及角色 / 世界观等小说功能" },
       { icon: "lucide:pen-line", text: "中间 · 编辑器：Markdown 写作区，支持保存、字数统计、专注模式" },
-      { icon: "lucide:bot", text: "右侧 · AI 面板：AI 对话创作、续写、润色，可一键保存为章节 / 角色" },
+      { icon: "lucide:bot", text: "右侧 · AI 面板：AI 对话创作、续写、润色，可指定输出到小说章节" },
     ],
     action: "",
   },
@@ -163,7 +163,6 @@ const steps = [
       { icon: "lucide:store", text: "写作技能：输入 @ 快速选择技能，或点顶部 🛍️ 打开技能市场，支持多技能同时生效" },
       { icon: "lucide:upload", text: "导入参考小说：点 ⬆ 上传小说，用「仿写续写」技能做同质化改编（自动换名换皮，不抄袭）" },
       { icon: "lucide:target", text: "指定输出：AI 生成可写入指定小说 / 章节，设置目标字数，支持批量续写、停止与实时进度" },
-      { icon: "lucide:file-plus-2", text: "每条 AI 回复下方可一键「保存为章节」或「保存为角色」" },
     ],
     action: "",
   },

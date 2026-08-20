@@ -177,16 +177,6 @@
         </div>
         <div class="message-content">
           <div class="message-text">{{ msg.content }}</div>
-          <div v-if="msg.role === 'assistant'" class="message-actions">
-            <el-button size="small" text type="primary" @click="saveAsChapter(msg)">
-              <el-icon><Icon icon="lucide:file-plus-2" /></el-icon>
-              保存为章节
-            </el-button>
-            <el-button size="small" text type="primary" @click="saveAsCharacter(msg)">
-              <el-icon><Icon icon="lucide:user-plus" /></el-icon>
-              保存为角色
-            </el-button>
-          </div>
         </div>
       </div>
 
@@ -338,36 +328,11 @@
         <el-button type="primary" @click="showOOCDialog = false">知道了</el-button>
       </template>
     </el-dialog>
-
-    <!-- 保存为章节对话框（支持分组） -->
-    <el-dialog v-model="showChapterDialog" title="保存为章节" width="440px" :close-on-click-modal="false">
-      <el-form label-width="60px" size="default">
-        <el-form-item label="标题" required>
-          <el-input v-model="chapterForm.title" placeholder="章节标题" />
-        </el-form-item>
-        <el-form-item label="分组">
-          <el-select
-            v-model="chapterForm.group"
-            allow-create
-            filterable
-            clearable
-            placeholder="选择或输入分组（如：第一卷），留空放根目录"
-            style="width: 100%"
-          >
-            <el-option v-for="g in existingGroups" :key="g" :label="g" :value="g" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showChapterDialog = false">取消</el-button>
-        <el-button type="primary" @click="confirmSaveChapter">保存</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, nextTick, watch, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, nextTick, watch, onMounted, onBeforeUnmount } from "vue";
 import { ElMessage } from "element-plus";
 import { invoke } from "@tauri-apps/api/core";
 import type { Character } from "@/types";
@@ -680,11 +645,6 @@ async function handleSend() {
 
   scrollToBottom();
 }
-
-// ===== 保存为章节对话框（支持分组） =====
-const showChapterDialog = ref(false);
-const pendingChapterMsg = ref<any>(null);
-const chapterForm = reactive({ title: "", group: "" });
 
 /**
  * 将 AI 回复按章节标题拆分为多个章节块。
@@ -1391,13 +1351,6 @@ async function autoFillNovelMeta(projectId: string) {
   }
 }
 
-// 当前项目已有的分组（供下拉选择）
-const existingGroups = computed(() => {
-  const set = new Set<string>();
-  for (const c of projectStore.chapters) if (c.group) set.add(c.group);
-  return Array.from(set);
-});
-
 /** 从风格摘要关键词推断题材（AI 未返回 genre 时兜底） */
 function inferGenreFromSummary(summary: string): string {
   if (!summary) return "";
@@ -1496,75 +1449,6 @@ async function fillMetaFromReference(projectId: string) {
   }
 }
 
-/** 打开「保存为章节」对话框 */
-async function saveAsChapter(msg: any) {
-  const projectId = projectStore.currentProject?.id;
-  if (!projectId) {
-    ElMessage.warning("请先打开一本小说");
-    return;
-  }
-  const content = (msg.content || "").trim();
-  if (!content) {
-    ElMessage.warning("回复内容为空，无法保存为章节");
-    return;
-  }
-  pendingChapterMsg.value = msg;
-  // 规范化标题：去掉 # / 分组路径 / .md，得到纯标题
-  chapterForm.title = normalizeChapterTitle(extractChapterTitle(content));
-  chapterForm.group = "";
-  showChapterDialog.value = true;
-}
-
-/** 确认保存章节：写入磁盘 + 自动在编辑器打开刚保存的章节 */
-async function confirmSaveChapter() {
-  const projectId = projectStore.currentProject?.id;
-  if (!projectId || !pendingChapterMsg.value) return;
-  const raw = normalizeChapterTitle(chapterForm.title.trim());
-  if (!raw) {
-    ElMessage.warning("请输入章节标题");
-    return;
-  }
-  const content = (pendingChapterMsg.value.content || "").trim();
-  const group = chapterForm.group.trim();
-  try {
-    // 标题重名时自动加序号，避免覆盖已有章节
-    const existing = new Set(projectStore.chapters.map((c) => c.title));
-    let title = raw;
-    let n = 2;
-    while (existing.has(title)) {
-      title = `${raw}_${n}`;
-      n++;
-    }
-
-    // 写入磁盘，返回章节相对路径
-    const filePath = await invoke<string>("save_chapter", {
-      projectId,
-      chapterTitle: title,
-      group,
-      content,
-    });
-    await projectStore.openProject(projectId);
-
-    // 自动在中间编辑器打开刚保存的章节（立即看到文字）
-    const chapter = projectStore.chapters.find((c) => c.file_name === filePath);
-    if (chapter) {
-      const c = await invoke<string>("read_chapter", {
-        projectId,
-        fileName: filePath,
-      });
-      editorStore.openChapterWithMemory(chapter, c, projectId);
-    }
-
-    showChapterDialog.value = false;
-    pendingChapterMsg.value = null;
-    // 右侧聊天不再展示完整章节（太长），替换为简短提示
-    aiStore.replaceLastAssistant(`📖 已保存为章节「${title}」，全文已在中间编辑器展示，此处不再重复`);
-    ElMessage.success(`章节「${title}」已创建并写入${group ? `（${group}）` : ""}`);
-  } catch (e) {
-    ElMessage.error("保存章节失败: " + e);
-  }
-}
-
 /** 从 AI 回复提取章节标题候选 */
 function extractChapterTitle(content: string): string {
   const m =
@@ -1599,66 +1483,6 @@ function smartTitleFromContent(content: string): string {
     title = `${title}…`;
   }
   return title;
-}
-
-/** 把 AI 回复保存为角色（写入角色管理） */
-async function saveAsCharacter(msg: any) {
-  const projectId = projectStore.currentProject?.id;
-  if (!projectId) {
-    ElMessage.warning("请先打开一本小说");
-    return;
-  }
-  try {
-    const char = parseCharacterFromText(msg.content || "");
-    await invoke("save_character", { projectId, character: char });
-    await projectStore.openProject(projectId);
-    ElMessage.success(`角色「${char.name}」已保存到角色管理`);
-  } catch (e) {
-    ElMessage.error("保存角色失败: " + e);
-  }
-}
-
-/** 从 AI 回复文本解析角色（优先 JSON，其次提取姓名，正文存备注） */
-function parseCharacterFromText(text: string): Character {
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    try {
-      const d = JSON.parse(jsonMatch[0]);
-      const pick = (keys: string[], fallback = "") => {
-        for (const k of keys) if (d[k]) return String(d[k]);
-        return fallback;
-      };
-      return {
-        id: `char_${Date.now()}`,
-        name: pick(["name", "姓名"], "新角色"),
-        gender: pick(["gender", "性别"], "未知"),
-        age: pick(["age", "年龄"]),
-        personality: pick(["personality", "性格"]),
-        appearance: pick(["appearance", "外貌"]),
-        background: pick(["background", "背景", "背景故事"]),
-        relationships: pick(["relationships", "关系"]),
-        speech_pattern: pick(["speech_pattern", "口头禅"]),
-        notes: "",
-      };
-    } catch { /* 非 JSON，走下面兜底 */ }
-  }
-  // 非 JSON：尝试提取「姓名：XXX」/「角色名：XXX」或首行
-  const nameMatch =
-    text.match(/(?:姓名|角色名|角色)[：:]\s*([\u4e00-\u9fa5A-Za-z0-9·]{1,16})/) ||
-    text.match(/^【?([\u4e00-\u9fa5A-Za-z0-9·]{1,16})】?[：:]/);
-  const name = nameMatch ? nameMatch[1] : text.split("\n")[0].trim().slice(0, 16) || "新角色";
-  return {
-    id: `char_${Date.now()}`,
-    name,
-    gender: "未知",
-    age: "",
-    personality: "",
-    appearance: "",
-    background: "",
-    relationships: "",
-    speech_pattern: "",
-    notes: text.slice(0, 1000),
-  };
 }
 
 function handleClear() {
