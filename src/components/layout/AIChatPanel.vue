@@ -548,7 +548,8 @@ async function handleSend() {
         personality: c.personality,
         background: c.background,
       })),
-      world_setting?.content || ""
+      world_setting?.content || "",
+      aiStore.contextLimit
     );
 
     // 设置角色设定给人设校验用

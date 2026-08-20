@@ -236,7 +236,8 @@ export function buildSmartContext(
   currentContent: string,
   memories: { chapter_id: string; chapter_title: string; summary: string; key_events: string[] }[],
   characters: { name: string; personality: string; background: string }[],
-  worldSetting: string
+  worldSetting: string,
+  topN: number = 5
 ): string {
   const parts: string[] = [];
 
@@ -264,8 +265,8 @@ export function buildSmartContext(
     parts.push(`【主要角色】\n${charDesc}\n`);
   }
 
-  // 3. 智能召回记忆（只选最相关的）
-  const relevantMemories = recallRelevantMemories(currentContent, memories, 5);
+  // 3. 智能召回记忆（只选最相关的，数量由「携带章节数」决定）
+  const relevantMemories = recallRelevantMemories(currentContent, memories, topN);
   if (relevantMemories.length > 0) {
     const memDesc = relevantMemories
       .map(

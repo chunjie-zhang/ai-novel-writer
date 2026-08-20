@@ -31,6 +31,8 @@ interface PersistedAIConfig {
   streaming?: boolean;
   /** 目标字数（每次生成控制在此附近；留空不限制） */
   targetWordCount?: number;
+  /** 携带章节数（续写时召回最近 N 章记忆作为上下文） */
+  contextLimit?: number;
 }
 
 function loadConfig(): PersistedAIConfig | null {
@@ -99,6 +101,8 @@ export const useAIStore = defineStore("ai", () => {
   const streaming = ref(saved?.streaming ?? true);
   /** 目标字数（全局配置，设置一次后持久生效；留空不限制） */
   const targetWordCount = ref<number | undefined>(saved?.targetWordCount ?? undefined);
+  /** 携带章节数（全局配置，默认 30 章，持久保存） */
+  const contextLimit = ref(saved?.contextLimit ?? 30);
 
   // ===== 计算属性：根据当前模式解析实际模型参数 =====
   const resolvedApiKey = computed(() => {
@@ -141,7 +145,7 @@ export const useAIStore = defineStore("ai", () => {
   // 本地 localStorage 立即保存；磁盘防抖保存（避免频繁 IO）
   let diskSaveTimer: ReturnType<typeof setTimeout> | null = null;
   watch(
-    [modelProvider, builtinVariant, customApiKey, customBaseUrl, customModelName, temperature, maxTokens, topP, streaming, targetWordCount],
+    [modelProvider, builtinVariant, customApiKey, customBaseUrl, customModelName, temperature, maxTokens, topP, streaming, targetWordCount, contextLimit],
     () => {
       persistConfigLocal();
       scheduleDiskSave();
@@ -167,6 +171,7 @@ export const useAIStore = defineStore("ai", () => {
       topP: topP.value,
       streaming: streaming.value,
       targetWordCount: targetWordCount.value,
+      contextLimit: contextLimit.value,
     };
   }
 
@@ -206,6 +211,7 @@ export const useAIStore = defineStore("ai", () => {
     if (config.topP !== undefined) topP.value = config.topP;
     if (config.streaming !== undefined) streaming.value = config.streaming;
     if (config.targetWordCount !== undefined) targetWordCount.value = config.targetWordCount;
+    if (config.contextLimit !== undefined) contextLimit.value = config.contextLimit;
     // 应用后同步到 localStorage，避免下次又读到旧的
     persistConfigLocal();
   }
@@ -440,6 +446,7 @@ export const useAIStore = defineStore("ai", () => {
     topP,
     streaming,
     targetWordCount,
+    contextLimit,
     // 解析后的只读参数（用于实际调用）
     resolvedApiKey,
     resolvedBaseUrl,

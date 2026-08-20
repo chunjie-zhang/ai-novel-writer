@@ -170,7 +170,7 @@
 
       <el-form-item label="携带章节数">
         <el-input-number
-          v-model="contextLimit"
+          v-model="aiStore.contextLimit"
           :min="1"
           :max="50"
           :step="1"
@@ -212,7 +212,6 @@ import { ElMessage } from "element-plus";
 
 const aiStore = useAIStore();
 const writingStore = useWritingStore();
-const contextLimit = ref(10);
 const isTesting = ref(false);
 
 function selectScene(scene: WritingScene) {
