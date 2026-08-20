@@ -520,9 +520,9 @@ function getEditorSelection(): string {
   const live = milkdownEditorRef.value?.getSelectionText?.()?.trim() || "";
   return live || lastSelectionText;
 }
-// 用新文本替换编辑器当前选区（AI 结果局部应用，不覆盖整章）
-function replaceEditorSelection(newText: string) {
-  milkdownEditorRef.value?.replaceSelection?.(newText);
+// 用新文本替换编辑器当前选区（AI 结果局部应用，不覆盖整章）；range 为点击前缓存的选区，避免失焦后丢失
+function replaceEditorSelection(newText: string, range?: { from: number; to: number }) {
+  milkdownEditorRef.value?.replaceSelection?.(newText, range);
 }
 
 // 编辑器内选中文字时，显示 AI 快捷浮栏（润色/改写/扩写/缩写）
@@ -637,16 +637,19 @@ async function handleAI(action: string) {
     return;
   }
 
+  // 点击浮栏按钮会令编辑器失焦、选区丢失，先缓存选区范围，AI 返回后按此覆盖选中文字
+  const selRange = milkdownEditorRef.value?.getSelectionRange?.() || undefined;
+
   const messages = buildEditPrompt(selectedText, action);
   try {
-    const response = await aiStore.sendMessage(
-      messages[messages.length - 1].content
-    );
+    // 用 silentCall：只发送选中的这段文字，不携带聊天历史 / 全书上下文，不写入聊天
+    const response = await aiStore.silentCall(messages, { temperature: 0.4 });
     // 用 AI 结果替换编辑器中的选中区域，不覆盖整章
-    replaceEditorSelection(response);
+    replaceEditorSelection(response, selRange);
     ElMessage.success("已应用 AI 修改");
   } catch (e) {
     console.error("AI 操作失败:", e);
+    ElMessage.error("AI 操作失败，请重试");
   }
 }
 

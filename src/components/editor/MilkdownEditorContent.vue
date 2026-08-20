@@ -183,20 +183,39 @@ function getSelectionText(): string {
   return text.trim();
 }
 
-/** 用新文本替换当前编辑器选区 */
-function replaceSelection(newText: string) {
+/** 用新文本替换当前编辑器选区（可传入点击前缓存的选区，避免按钮点击失焦后选区丢失） */
+function replaceSelection(newText: string, range?: { from: number; to: number }) {
   const editor = (editorRef as any)?.get?.();
   if (!editor) return;
   editor.action((ctx: any) => {
     const view = ctx.get(editorViewCtx);
-    const { from, to } = view.state.selection;
+    let { from, to } = view.state.selection;
+    // 优先使用调用前缓存的选区（按钮点击/await 期间编辑器失焦，实时选区可能已丢失）
+    if (range && range.to > range.from) {
+      const size = view.state.doc.content.size;
+      from = Math.max(0, Math.min(range.from, size));
+      to = Math.max(from, Math.min(range.to, size));
+    }
     if (from === to) return; // 无选区不处理
     const tr = view.state.tr.insertText(newText, from, to);
     view.dispatch(tr);
   });
 }
 
-defineExpose({ getSelectionText, replaceSelection, applyCursorRestore });
+/** 获取当前编辑器选区范围（供点击 AI 按钮前缓存，避免失焦后选区丢失） */
+function getSelectionRange(): { from: number; to: number } {
+  const editor = (editorRef as any)?.get?.();
+  if (!editor) return { from: 0, to: 0 };
+  let range = { from: 0, to: 0 };
+  editor.action((ctx: any) => {
+    const view = ctx.get(editorViewCtx);
+    const { from, to } = view.state.selection;
+    range = { from, to };
+  });
+  return range;
+}
+
+defineExpose({ getSelectionText, replaceSelection, applyCursorRestore, getSelectionRange });
 </script>
 
 <style scoped>

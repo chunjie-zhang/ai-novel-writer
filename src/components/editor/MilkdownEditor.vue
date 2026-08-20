@@ -41,15 +41,18 @@ function handleCursorUpdate(pos: number, scroll: number) {
 function getSelectionText(): string {
   return contentRef.value?.getSelectionText?.() ?? "";
 }
-function replaceSelection(newText: string) {
-  contentRef.value?.replaceSelection?.(newText);
+function replaceSelection(newText: string, range?: { from: number; to: number }) {
+  contentRef.value?.replaceSelection?.(newText, range);
+}
+function getSelectionRange(): { from: number; to: number } {
+  return contentRef.value?.getSelectionRange?.() ?? { from: 0, to: 0 };
 }
 // 透传光标/滚动恢复能力（断稿记忆回溯）
 function applyCursorRestore(pos: number, scroll: number) {
   contentRef.value?.applyCursorRestore?.(pos, scroll);
 }
 
-defineExpose({ getSelectionText, replaceSelection, applyCursorRestore });
+defineExpose({ getSelectionText, replaceSelection, applyCursorRestore, getSelectionRange });
 </script>
 
 <style scoped>
