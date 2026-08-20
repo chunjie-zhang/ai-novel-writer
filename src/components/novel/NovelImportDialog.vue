@@ -1,6 +1,15 @@
 <template>
   <el-dialog v-model="visible" title="导入参考小说" width="560px" :close-on-click-modal="false">
     <div class="import-container">
+      <!-- 顶部步骤进度条 -->
+      <div class="import-steps">
+        <el-steps :active="stepIndex" simple size="small">
+          <el-step title="选择文件" />
+          <el-step title="选择章节" />
+          <el-step title="分析与技能" />
+        </el-steps>
+      </div>
+
       <!-- 步骤1：选择文件 -->
       <div v-if="step === 'select'" class="import-step">
         <div class="upload-zone" @click="handleSelectFile">
@@ -206,33 +215,24 @@
 
     <template #footer>
       <div class="dialog-footer">
-        <div class="footer-left">
-          <el-steps :active="stepIndex" simple size="small">
-            <el-step title="选择文件" />
-            <el-step title="选择章节" />
-            <el-step title="分析与技能" />
-          </el-steps>
-        </div>
-        <div class="footer-right">
-          <el-button @click="handleCancel">
-            {{ step === 'analysis' && hasSelection ? '开始写作' : '取消' }}
-          </el-button>
-          <el-button
-            v-if="step === 'preview'"
-            type="primary"
-            :loading="refStore.isAnalyzing"
-            @click="handleAnalyze"
-          >
-            开始分析
-          </el-button>
-          <el-button
-            v-if="step === 'analysis' && hasSelection"
-            type="primary"
-            @click="handleConfirm"
-          >
-            确认使用
-          </el-button>
-        </div>
+        <el-button @click="handleCancel">
+          {{ step === 'analysis' && hasSelection ? '开始写作' : '取消' }}
+        </el-button>
+        <el-button
+          v-if="step === 'preview'"
+          type="primary"
+          :loading="refStore.isAnalyzing"
+          @click="handleAnalyze"
+        >
+          开始分析
+        </el-button>
+        <el-button
+          v-if="step === 'analysis' && hasSelection"
+          type="primary"
+          @click="handleConfirm"
+        >
+          确认使用
+        </el-button>
       </div>
     </template>
   </el-dialog>
@@ -739,16 +739,34 @@ function formatTime(t?: string) {
 .dialog-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: 10px;
   width: 100%;
 }
 
-.footer-left {
-  flex: 1;
-  margin-right: 16px;
+/* 顶部步骤条（卡片式进度，避免与按钮区拥挤） */
+.import-steps {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: var(--panel-bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
-
-.footer-left :deep(.el-steps) {
+.import-steps :deep(.el-steps) {
   background: transparent;
+}
+.import-steps :deep(.el-step__title) {
+  font-size: 12px;
+  font-weight: 500;
+}
+.import-steps :deep(.el-step__icon) {
+  width: 22px;
+  height: 22px;
+}
+.import-steps :deep(.el-step__icon-inner) {
+  font-size: 12px;
+}
+.import-steps :deep(.el-step__head) {
+  margin-right: 6px;
 }
 </style>
