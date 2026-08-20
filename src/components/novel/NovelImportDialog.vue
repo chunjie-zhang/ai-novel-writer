@@ -37,8 +37,14 @@
         <el-divider />
 
         <div class="sample-section">
-          <h4>选择分析样本章节：</h4>
-          <p class="sample-hint">选择 1-5 章作为 AI 分析样本（默认选择前 3 章）</p>
+          <div class="sample-head">
+            <h4>选择分析样本章节：</h4>
+            <div class="sample-actions">
+              <el-button size="small" text type="primary" @click="selectAllChapters">全选</el-button>
+              <el-button size="small" text @click="refStore.selectedChapters = []">取消全选</el-button>
+            </div>
+          </div>
+          <p class="sample-hint">选择 1-5 章作为 AI 分析样本（默认前 3 章，可一键全选；章节过多时自动取前 30 章保证分析质量）</p>
 
           <el-checkbox-group v-model="refStore.selectedChapters" class="chapter-checkboxes">
             <el-checkbox
@@ -164,8 +170,10 @@
                   <Icon v-if="skill.icon" :icon="skill.icon" :width="18" :height="18" />
                   <span v-else>{{ skill.emoji }}</span>
                 </span>
-                <span class="mode-label">{{ skill.name }}</span>
-                <span class="mode-desc">{{ skill.description }}</span>
+                <div class="mode-info">
+                  <span class="mode-label">{{ skill.name }}</span>
+                  <span class="mode-desc">{{ skill.description }}</span>
+                </div>
                 <span class="mode-check" v-if="skillStore.activeSkillIds.includes(skill.id)">
                   <Icon icon="lucide:check" :width="14" :height="14" />
                 </span>
@@ -256,6 +264,11 @@ const confirmLabel = computed(() =>
 /** 切换技能选中状态（追加/取消） */
 function toggleSkillSelect(skill: any) {
   skillStore.selectSkill(skill.id);
+}
+
+/** 全选所有章节作为分析样本（上传小说可能上千章，避免逐章勾选） */
+function selectAllChapters() {
+  refStore.selectedChapters = refStore.chapters.map((c) => c.index);
 }
 
 const step = ref<"select" | "preview" | "analysis">("select");
@@ -441,6 +454,22 @@ function formatTime(t?: string) {
   margin-bottom: 12px;
 }
 
+.sample-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sample-head h4 {
+  margin: 0;
+}
+.sample-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .chapter-checkboxes {
   display: flex;
   flex-direction: column;
@@ -566,9 +595,10 @@ function formatTime(t?: string) {
 }
 
 .mode-section h4 {
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
   margin-bottom: 6px;
-  color: var(--text-2);
+  color: var(--text-1);
 }
 
 .mode-subtitle {
@@ -599,12 +629,12 @@ function formatTime(t?: string) {
   cursor: pointer;
 }
 
-/* 技能库网格（可滚动） */
+/* 技能库网格（可滚动，两列强制等宽，避免长描述撑破列宽） */
 .mode-skills {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-  max-height: 280px;
+  max-height: 300px;
   overflow-y: auto;
   padding: 2px;
 }
@@ -612,14 +642,15 @@ function formatTime(t?: string) {
 .mode-card {
   position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
   background: var(--panel-bg-2);
+  min-width: 0;
 }
 
 .mode-card:hover {
@@ -632,29 +663,46 @@ function formatTime(t?: string) {
   background: var(--accent-soft);
 }
 
+/* 图标：圆形渐变底 */
 .mode-skill .mode-emoji {
-  color: var(--accent);
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  flex-shrink: 0;
 }
 
-.mode-emoji {
-  font-size: 18px;
+.mode-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+  padding-right: 14px; /* 给右上角勾选图标留空间 */
 }
 
 .mode-label {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mode-desc {
   font-size: 11px;
   color: var(--text-2);
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
 }
 
 .mode-check {

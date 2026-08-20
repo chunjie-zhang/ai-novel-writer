@@ -11,6 +11,7 @@ import { WRITING_MODES } from "@/types";
 import { useAIStore } from "./ai";
 import { useSkillStore } from "@/skills/store";
 import { extractJsonContent } from "@/utils/ai";
+import { ElMessage } from "element-plus";
 
 interface RawImportedNovel {
   id: string;
@@ -182,9 +183,16 @@ export const useReferenceStore = defineStore("reference", () => {
 
     isAnalyzing.value = true;
     try {
-      const sampleChapters = selectedChapters.value.length > 0
+      let sampleChapters = selectedChapters.value.length > 0
         ? chapters.value.filter((c) => selectedChapters.value.includes(c.index))
         : chapters.value.slice(0, 3);
+
+      // 样本保护：全选/章节过多时自动截取前 N 章，避免拼接超出模型上下文导致分析失败
+      const MAX_SAMPLE = 30;
+      if (sampleChapters.length > MAX_SAMPLE) {
+        sampleChapters = sampleChapters.slice(0, MAX_SAMPLE);
+        ElMessage.info(`章节过多，已自动选取前 ${MAX_SAMPLE} 章作为分析样本以保证分析质量`);
+      }
 
       const sampleContent = sampleChapters
         .map((c) => `【${c.title}】\n${c.content.slice(0, 2000)}`)
