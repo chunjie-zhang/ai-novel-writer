@@ -180,10 +180,18 @@
 
       <!-- AI 快捷操作浮动栏 -->
       <div v-if="hasSelection" class="ai-float-bar">
-        <el-button size="small" @click="handleAI('polish')">润色</el-button>
-        <el-button size="small" @click="handleAI('rewrite')">改写</el-button>
-        <el-button size="small" @click="handleAI('expand')">扩写</el-button>
-        <el-button size="small" @click="handleAI('abridge')">缩写</el-button>
+        <template v-if="aiProcessing">
+          <span class="ai-processing">
+            <span class="ai-spinner"></span>
+            <span>{{ aiProcessingLabel }}</span>
+          </span>
+        </template>
+        <template v-else>
+          <el-button size="small" @click="handleAI('polish')">润色</el-button>
+          <el-button size="small" @click="handleAI('rewrite')">改写</el-button>
+          <el-button size="small" @click="handleAI('expand')">扩写</el-button>
+          <el-button size="small" @click="handleAI('abridge')">缩写</el-button>
+        </template>
       </div>
     </template>
 
@@ -339,6 +347,18 @@ const existingChapterGroups = computed(() => {
   return Array.from(set);
 });
 const hasSelection = ref(false);
+/** 当前 AI 快捷操作（润色/改写/扩写/缩写）进行中；非空时浮栏显示处理状态 */
+const aiProcessing = ref<string | null>(null);
+const AI_ACTION_TEXT: Record<string, string> = {
+  polish: "润色",
+  rewrite: "改写",
+  expand: "扩写",
+  abridge: "缩写",
+};
+const aiProcessingLabel = computed(() => {
+  const t = aiProcessing.value ? AI_ACTION_TEXT[aiProcessing.value] : "";
+  return t ? `AI 正在${t}选中文字…` : "AI 处理中…";
+});
 const milkdownEditorRef = ref<InstanceType<typeof MilkdownEditor> | null>(null);
 const showGoalDialog = ref(false);
 const goalEnabled = ref(writingStore.stats.dailyGoal.enabled);
@@ -636,11 +656,13 @@ async function handleAI(action: string) {
     ElMessage.warning("请先在正文中选中要处理的文字");
     return;
   }
+  if (aiProcessing.value) return; // 处理中忽略重复点击
 
-  // 点击浮栏按钮会令编辑器失焦、选区丢失，先缓存选区范围，AI 返回后按此覆盖选中文字
-  const selRange = milkdownEditorRef.value?.getSelectionRange?.() || undefined;
+  // 点击浮栏按钮会令编辑器失焦、实时选区丢失；使用选中文字时缓存的选区范围，AI 返回后按此覆盖选中文字
+  const selRange = milkdownEditorRef.value?.getLastSelectionRange?.() ?? undefined;
 
   const messages = buildEditPrompt(selectedText, action);
+  aiProcessing.value = action; // 浮栏显示「AI 正在…」，直到处理结束
   try {
     // 用 silentCall：只发送选中的这段文字，不携带聊天历史 / 全书上下文，不写入聊天
     const response = await aiStore.silentCall(messages, { temperature: 0.4 });
@@ -650,6 +672,8 @@ async function handleAI(action: string) {
   } catch (e) {
     console.error("AI 操作失败:", e);
     ElMessage.error("AI 操作失败，请重试");
+  } finally {
+    aiProcessing.value = null;
   }
 }
 
@@ -1146,5 +1170,25 @@ function createNewProject() {
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(8px);
+}
+
+/* AI 处理中状态条（润色/改写/扩写/缩写进行时替换按钮区） */
+.ai-processing {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.ai-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  animation: asp-spin 0.8s linear infinite;
+  flex-shrink: 0;
 }
 </style>

@@ -74,6 +74,8 @@ onBeforeUnmount(() => {
 let cleanupCursorTracking: (() => void) | null = null;
 let pendingPos: number | null = null;
 let pendingScroll: number | null = null;
+/** 最近一次编辑器内选区范围（供点击 AI 按钮前使用；失焦后实时选区会失效，需用缓存的） */
+let lastSelectionRange: { from: number; to: number } | null = null;
 
 function getScrollTop(): number {
   const el = document.querySelector(".milkdown-editor");
@@ -91,6 +93,11 @@ function trackCursor() {
     const onSelection = () => {
       const sel = document.getSelection();
       if (sel && sel.rangeCount > 0 && view.dom.contains(sel.anchorNode)) {
+        // 选区在编辑器内：缓存范围供「选中文本 AI 操作」使用（点击按钮失焦后实时选区失效）
+        lastSelectionRange = {
+          from: view.state.selection.from,
+          to: view.state.selection.to,
+        };
         emit("cursor-update", view.state.selection.from, getScrollTop());
       }
     };
@@ -215,7 +222,14 @@ function getSelectionRange(): { from: number; to: number } {
   return range;
 }
 
-defineExpose({ getSelectionText, replaceSelection, applyCursorRestore, getSelectionRange });
+/** 返回最近一次编辑器内选中文字的范围（选中时缓存，不受按钮点击失焦影响） */
+function getLastSelectionRange(): { from: number; to: number } | null {
+  return lastSelectionRange && lastSelectionRange.to > lastSelectionRange.from
+    ? lastSelectionRange
+    : null;
+}
+
+defineExpose({ getSelectionText, replaceSelection, applyCursorRestore, getSelectionRange, getLastSelectionRange });
 </script>
 
 <style scoped>

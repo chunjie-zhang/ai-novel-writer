@@ -47,12 +47,15 @@ function replaceSelection(newText: string, range?: { from: number; to: number })
 function getSelectionRange(): { from: number; to: number } {
   return contentRef.value?.getSelectionRange?.() ?? { from: 0, to: 0 };
 }
+function getLastSelectionRange(): { from: number; to: number } | null {
+  return contentRef.value?.getLastSelectionRange?.() ?? null;
+}
 // 透传光标/滚动恢复能力（断稿记忆回溯）
 function applyCursorRestore(pos: number, scroll: number) {
   contentRef.value?.applyCursorRestore?.(pos, scroll);
 }
 
-defineExpose({ getSelectionText, replaceSelection, applyCursorRestore, getSelectionRange });
+defineExpose({ getSelectionText, replaceSelection, applyCursorRestore, getSelectionRange, getLastSelectionRange });
 </script>
 
 <style scoped>
