@@ -193,7 +193,7 @@ export const useWritingStore = defineStore("writing", () => {
   /** 构建人设校验 prompt */
   function buildOOCPrompt(content: string): string {
     if (!characterProfiles.value) return "";
-    return `【人设校验】\n角色设定：${characterProfiles.value}\n\n请检查以下内容中是否有角色行为、台词、性格与设定不一致的地方（人设崩塌/OOC）。如果有，列出具体问题。\n\n${content}`;
+    return `【人设校验】\n角色设定：${characterProfiles.value}\n\n请检查以下内容中是否有角色行为、台词、性格与设定不一致的地方（人设崩塌/OOC）。\n\n回复要求：第一行必须输出结论标记（二选一），然后换行输出详细检查报告：\n- 若发现人设不一致，第一行输出：【结论】存在人设不一致\n- 若未发现人设不一致，第一行输出：【结论】未发现人设不一致\n\n待检查内容：\n${content}`;
   }
 
   // ===== 敏感词库（仅保留多字词，避免单字“习”误报“学习/习惯”等正常词）=====

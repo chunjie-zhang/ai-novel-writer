@@ -638,9 +638,16 @@ async function handleSend() {
           ],
           { temperature: 0.2, maxTokens: 1024 }
         );
-        if (oocResult && oocResult.length > 20) {
-          showOOCResult.value = oocResult;
-          oocSummary.value = oocResult.slice(0, 100) + "...";
+        // 解析 AI 结论标记：只有确实发现人设不一致才弹窗，避免误报
+        const oocVerdict = oocResult?.match(/【结论】\s*(存在人设不一致|未发现人设不一致)/);
+        const hasIssue = oocVerdict
+          ? oocVerdict[1] === "存在人设不一致"
+          : oocResult?.length > 20; // 兜底：AI 未按格式输出时保留旧行为
+        if (hasIssue && oocResult && oocResult.length > 20) {
+          // 展示时去掉第一行结论标记，只显示报告正文
+          const detail = oocResult.replace(/^【结论】[^\n]*\n*/, "");
+          showOOCResult.value = detail;
+          oocSummary.value = detail.slice(0, 100) + "...";
           showOOCDialog.value = true;
         }
       } catch { /* 静默失败，不干扰主流程 */ }
