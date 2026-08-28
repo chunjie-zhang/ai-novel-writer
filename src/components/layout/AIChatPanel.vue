@@ -585,10 +585,10 @@ async function handleSend() {
     const n = aiStore.targetWordCount;
     const low = Math.round(n * 0.85);
     const high = Math.round(n * 1.15);
-    systemPrompt = `${systemPrompt}\n\n【输出字数要求（必须遵守）】\n本次输出正文汉字数必须控制在约 ${n} 字，合理范围 ${low}~${high} 字。\n要求：\n- 达到目标字数后立即自然收尾结束，不要继续展开新情节或啰嗦重复；\n- 若预测会超出上限，应压缩描写、加快节奏，确保在范围内完成；\n- 字数只统计正文汉字，不含标题、Markdown 符号、标点与空白。\n- 不要为了凑字数注水，也不要为了求短而残缺。`;
+    systemPrompt = `${systemPrompt}\n\n【输出字数要求（必须严格遵守）】\n本次输出正文汉字数必须写满 ${low}~${high} 字（目标约 ${n} 字）。这是硬性要求，未达到目标字数前不得结束正文。\n要求：\n- **必须写满**：字数不足 ${low} 字时，应继续展开情节、补充细节描写、深化冲突，直到达到目标字数，绝不能提前草草收尾；\n- 达到目标字数后自然收尾结束，不要继续无限展开或啰嗦重复；\n- 若预测会超出上限，应压缩描写、加快节奏，确保不超出合理范围；\n- 字数只统计正文汉字，不含标题、Markdown 符号、标点与空白；\n- 不要为了凑字数注水，也不要为了求短而残缺。写满 ${low} 字以上是底线。`;
     // 物理限制输出长度：目标字数 × 1.8 作为 token 上限（中文约 1 字 ≈ 1.3~1.5 token），
-    // 与既有上限取更小值，确保 AI 无法生成远超目标的内容
-    aiStore.maxTokens = Math.min(aiStore.maxTokens, Math.ceil(n * 1.8));
+    // 直接按目标字数设置上限，不再与旧上限取小——否则 3500 字会被默认 4096 tokens 压到写不满
+    aiStore.maxTokens = Math.ceil(n * 1.8);
   } else if (wantsMultiChapter) {
     // 多章节续写：提示 AI 按章节逐个输出，每章相对独立
     systemPrompt = `${systemPrompt}\n\n【多章节续写要求】\n本次请按用户要求的章节数量逐章输出，每个章节用 Markdown 一级标题「# 章节标题」开头，章节之间用空行分隔。\n标题格式必须统一：一律用「第N章 标题」且 N 用阿拉伯数字（如「第6章 归途」），不要用中文数字，不要用「第N卷」作为章节标题，不要重复卷标题。不要把所有章节挤成一大段，也不要只写一章就收尾。`;
@@ -849,7 +849,7 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
       if (targetPerChapter > 0) {
         const low = Math.round(targetPerChapter * 0.85);
         const high = Math.round(targetPerChapter * 1.15);
-        prompt += `\n【本章字数要求（必须遵守）】本章正文汉字数要控制在约 ${targetPerChapter} 字（合理范围 ${low}~${high} 字），不要只写 1000 字左右就收尾；内容要完整充实。`;
+        prompt += `\n【本章字数要求（必须严格遵守）】本章正文汉字数必须写满 ${low}~${high} 字（目标约 ${targetPerChapter} 字）。字数不足 ${low} 字前不得结束本章，应继续展开情节、补充细节，直到写满；不要只写 1000 字左右就收尾。`;
       }
 
       let content = "";

@@ -45,7 +45,7 @@ export const DEEPSEEK_PRESETS: Record<
     desc: "快速创作、日常续写、性价比高",
     model: "deepseek-chat",
     base_url: "https://api.deepseek.com",
-    max_tokens: 4096,
+    max_tokens: 8192,
   },
   "deepseek-v4-pro": {
     label: "DeepSeek V4 Pro",

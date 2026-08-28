@@ -126,7 +126,8 @@ export const useAIStore = defineStore("ai", () => {
 
   const resolvedMaxTokens = computed(() => {
     if (modelProvider.value === "builtin") {
-      return DEEPSEEK_PRESETS[builtinVariant.value].max_tokens;
+      // 内置模型：允许按目标字数动态上调输出上限，但不能超过该模型预设的硬上限
+      return Math.min(maxTokens.value, DEEPSEEK_PRESETS[builtinVariant.value].max_tokens);
     }
     return maxTokens.value;
   });
