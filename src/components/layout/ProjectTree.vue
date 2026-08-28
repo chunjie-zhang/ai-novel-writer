@@ -523,10 +523,18 @@ async function handleDeleteProject(proj: any) {
   try {
     await projectStore.deleteProject(proj.id);
     useVersionsStore().clearProject(proj.id);
-    // 若当前参考小说与删除的项目同名，联动清理参考小说及其依赖技能（仿写续写等）
+    // 若当前参考小说与删除的项目相关（标题相等或互相包含，参考小说标题常带"少琅"等后缀而项目名可能更短），
+    // 联动清理参考小说及其依赖技能（仿写续写等），避免 AI 助手顶部黄条残留失效的参考小说
     const refStore = useReferenceStore();
-    if (refStore.hasReference && refStore.referenceNovel?.title === proj.name) {
-      refStore.clear();
+    if (refStore.hasReference) {
+      const refTitle = (refStore.referenceNovel?.title || "").trim();
+      const projName = (proj.name || "").trim();
+      const matched =
+        refTitle === projName ||
+        (refTitle && projName && (refTitle.includes(projName) || projName.includes(refTitle)));
+      if (matched) {
+        refStore.clear();
+      }
     }
     // 删除的是当前打开的项目时，清理编辑器残留（章节 / 正文 / 光标），防止再建同名小说时中间展示旧内容
     if (wasCurrentProject) {
