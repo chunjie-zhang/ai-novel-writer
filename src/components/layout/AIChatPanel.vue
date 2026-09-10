@@ -596,11 +596,14 @@ async function handleSend() {
 
   aiStore.systemPrompt = systemPrompt;
 
-  // ===== 大批量续写（N≥4 章）：分批自动续写 =====
-  // 单次调用受 maxTokens 限制，写不完 N 章；分批生成 + 保存 + 衔接上下文，直到写满
+  // ===== 分批续写（写章节场景：N≥2 章走逐章生成；普通聊天：N≥4 才分批） =====
+  // 单次调用受 maxTokens 限制（约 8192 tokens），写不完多章：一次性生成多章会导致每章字数缩水。
+  // 因此凡是「写入小说」的多章续写（含 2-3 章）都走 generateMultiChapter 逐章生成 + 保存，
+  // 每章单独调用、单独控制字数，才能保证每章达到目标字数（如 3500）。
   if (wantsMultiChapter) {
     const chapterCount = extractChapterCount(text);
-    if (chapterCount >= 4) {
+    const needBatch = needSaveSkill ? chapterCount >= 2 : chapterCount >= 4;
+    if (needBatch) {
       // 右侧聊天显示用户需求（分批续写走静默调用，这里手动补一条 user 消息）
       aiStore.addMessage("user", text);
       await generateMultiChapter(text, chapterCount);
