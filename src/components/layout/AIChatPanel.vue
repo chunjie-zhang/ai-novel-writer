@@ -783,26 +783,28 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
       targetChapters = projectStore.chapters;
     }
 
-    // 仿写类技能（imitate-and-continue/imitate-style/reference-plot）：把参考小说从头仿写一遍 → 起始章号从第 1 章开始，不衔接目标小说已有章节
-    const isImitateSkill = skillStore.activeSkills.some(
-      (s) => s.id === "imitate-and-continue" || s.id === "imitate-style" || s.id === "reference-plot"
-    );
-    // 起始章号：仿写从头（1）开始；普通续写从「输出目标小说」已有章节的最大编号 + 1 开始（避免从第 1 章重写）
-    const startChapter = isImitateSkill
-      ? 1
-      : Math.max(maxChapterNumOf(targetChapters), targetChapters.length) + 1;
-    // 已有章节标题（作为衔接上下文；仿写场景视为新书，不衔接目标小说已有章节）
-    const existingTitles = isImitateSkill
-      ? []
-      : targetChapters.map((c) => c.title).filter(Boolean);
+    // 目标小说是否已有章节：
+    // - 已有章节 → 继续往后写（仿写/续写都一样，避免再次从第 1 章重写导致重复章节）
+    // - 无章节（全新小说）→ 从第 1 章开始
+    const hasExistingChapters =
+      targetChapters.length > 0 ||
+      Math.max(maxChapterNumOf(targetChapters), 0) > 0;
+    // 起始章号：已有章节 → 已有最大编号 + 1；否则从第 1 章开始
+    const startChapter = hasExistingChapters
+      ? Math.max(maxChapterNumOf(targetChapters), targetChapters.length) + 1
+      : 1;
+    // 已有章节标题（作为衔接上下文；用于让 AI 接着已有剧情继续写，并计算本批新增了哪些章）
+    const existingTitles = hasExistingChapters
+      ? targetChapters.map((c) => c.title).filter(Boolean)
+      : [];
     const savedTitles: string[] = [...existingTitles];
     let written = 0;
     let guard = 0;
     const MAX_BATCHES = 100; // 最多 100 批（逐章时允许更多章），防止异常死循环
 
-    // 读取已有章节最后一章结尾内容，作为续写衔接上下文（让暂停后再次续写能真正接上剧情；仿写场景从头仿写不读取）
+    // 读取已有章节最后一章结尾内容，作为续写衔接上下文（让暂停后再次续写/继续仿写能真正接上剧情）
     let existingTail = "";
-    if (!isImitateSkill && existingTitles.length > 0) {
+    if (hasExistingChapters && existingTitles.length > 0) {
       try {
         const lastCh = targetChapters[targetChapters.length - 1];
         if (lastCh) {
