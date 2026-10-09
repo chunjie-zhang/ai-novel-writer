@@ -1,0 +1,38 @@
+docs/使用手册.md
+  s_c0c7847db2b4e7::t_c1f68190e60772 493,497-500,502
+src/components/layout/MainEditor.vue
+  s_c0c7847db2b4e7::t_eef93bceb96104 668-669
+src/components/layout/AIChatPanel.vue
+  s_c0c7847db2b4e7::t_3eeb309347ed7c 268-303
+  s_c0c7847db2b4e7::t_8d5ee5dd26feb0 336-338
+  s_c0c7847db2b4e7::t_9d8a975e1f79f2 383-384
+  s_c0c7847db2b4e7::t_b7922feb5035f5 914
+  s_c0c7847db2b4e7::t_0e79b77d87be06 403-404
+  s_c0c7847db2b4e7::t_08dd2422aee6db 2085-2127
+src/stores/ai.ts
+  h_9acd56a6187486 285,291,293
+  s_c0c7847db2b4e7::t_c7b201008a8ebf 415-433,437-440,444,446-454,459
+README.md
+  s_c0c7847db2b4e7::t_469e54aff5116d 101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "6c0bd805f0654265e9dd03fba91da20749ca20c8",
+  "prompts": {},
+  "humans": {
+    "h_9acd56a6187486": {
+      "author": "zhangchunjie8 <zhangchunjie8@jd.com>"
+    }
+  },
+  "sessions": {
+    "s_c0c7847db2b4e7": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "ad4b3876-042e-4d73-8f93-c5ae7cc9cff5",
+        "model": "gpt-4.1"
+      },
+      "human_author": "zhangchunjie8 <zhangchunjie8@jd.com>"
+    }
+  }
+}
