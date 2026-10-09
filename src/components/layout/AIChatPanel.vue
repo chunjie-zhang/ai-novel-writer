@@ -265,6 +265,42 @@
           </span>
         </el-tag>
       </div>
+
+      <!-- 名家笔法状态条：已选则展示（可单个移除/更换），未选则提供快捷入口 -->
+      <div class="author-status">
+        <span class="author-status-label">笔法</span>
+        <template v-if="authorStyleStore.hasActive">
+          <el-tag
+            v-for="a in authorStyleStore.activeAuthors"
+            :key="a.id"
+            size="small"
+            type="warning"
+            effect="light"
+            closable
+            class="author-status-tag"
+            @close="authorStyleStore.toggleAuthor(a.id)"
+          >
+            <span class="author-status-inner">
+              <span class="author-status-emoji">{{ a.emoji }}</span>
+              <span class="author-status-name">{{ a.name }}</span>
+            </span>
+          </el-tag>
+          <el-button text size="small" class="author-change-btn" @click="showAuthorStyle = true">
+            更换
+          </el-button>
+        </template>
+        <el-button
+          v-else
+          text
+          size="small"
+          class="author-add-btn"
+          @click="showAuthorStyle = true"
+        >
+          <el-icon><Icon icon="lucide:pen-tool" /></el-icon>
+          <span>选择名家笔法（可选，与技能叠加）</span>
+        </el-button>
+      </div>
+
       <el-input
         v-model="inputText"
         type="textarea"
@@ -296,6 +332,9 @@
 
     <!-- 导入参考小说对话框 -->
     <NovelImportDialog v-model:visible="showImport" @confirm="handleImportConfirm" />
+
+    <!-- 名家笔法选择对话框 -->
+    <AuthorStyleSelector v-model:visible="showAuthorStyle" />
 
     <!-- 人设校验结果对话框 -->
     <el-dialog v-model="showOOCDialog" width="560px" :close-on-click-modal="false" class="ooc-dialog">
@@ -341,6 +380,8 @@ import { useSkillStore } from "@/skills/store";
 import { useReferenceStore } from "@/stores/reference";
 import { useWritingStore } from "@/stores/writing";
 import NovelImportDialog from "@/components/novel/NovelImportDialog.vue";
+import AuthorStyleSelector from "@/components/novel/AuthorStyleSelector.vue";
+import { useAuthorStyleStore } from "@/stores/authorStyle";
 import { useProjectStore } from "@/stores/project";
 import { useEditorStore } from "@/stores/editor";
 import { useOutlineStore } from "@/stores/outline";
@@ -359,6 +400,8 @@ const editorStore = useEditorStore();
 
 const inputText = ref("");
 const showImport = ref(false);
+const showAuthorStyle = ref(false);
+const authorStyleStore = useAuthorStyleStore();
 const showOOCDialog = ref(false);
 const showOOCResult = ref("");
 const oocSummary = ref("");
@@ -868,7 +911,7 @@ async function generateMultiChapter(originalText: string, totalChapters: number)
             { role: "system", content: ai.systemPrompt || "你是一位专业的小说创作助手。" },
             { role: "user", content: prompt },
           ],
-          { temperature: 0.7, maxTokens: batchMaxTokens }
+          { temperature: 0.7, maxTokens: batchMaxTokens, useStyle: true }
         );
       } catch (e) {
         console.error("分批续写第", written + 1, "批失败:", e);
@@ -2037,6 +2080,49 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ===== 名家笔法状态条 ===== */
+.author-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.author-status-label {
+  font-size: 11px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+.author-status-tag {
+  max-width: 100%;
+}
+.author-status-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+}
+.author-status-emoji {
+  flex-shrink: 0;
+}
+.author-status-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.author-change-btn,
+.author-add-btn {
+  padding: 0 4px;
+  height: auto;
+  font-size: 11px;
+} 
+.author-add-btn {
+  color: var(--text-3);
+}
+.author-add-btn:hover {
+  color: var(--accent);
 }
 
 /* ===== 输出目标小说选择条 ===== */

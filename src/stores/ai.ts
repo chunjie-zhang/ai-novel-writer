@@ -282,22 +282,15 @@ export const useAIStore = defineStore("ai", () => {
     isGenerating.value = true;
     streamingDraft.value = "";
     try {
-      // 注入题材风格模板（若已选择），让 AI 输出贴合所选题材的文风
+      // 注入题材风格模板 + 名家笔法（若已选择），让 AI 输出贴合所选题材与笔法的文风
       let finalSystemPrompt = systemPrompt.value;
       let finalTemperature = temperature.value;
       const templateStore = useTemplateStore();
       if (templateStore.activeTemplate) {
-        const t = templateStore.activeTemplate;
-        finalSystemPrompt = `${finalSystemPrompt}\n\n【题材风格指引：${t.emoji} ${t.name}】\n${t.stylePrompt}\n- 角色命名：${t.namingStyle}\n- 节奏建议：${t.paceAdvice}\n请严格遵循以上题材风格进行创作。`;
         // 未指定场景时，使用模板推荐温度
-        finalTemperature = t.temperature;
+        finalTemperature = templateStore.activeTemplate.temperature;
       }
-
-      // 注入名家笔法（若已选择）：只借鉴技法特征（叙事/语言/节奏），禁止沿用其专有名词与原文
-      const authorStyleStore = useAuthorStyleStore();
-      if (authorStyleStore.hasActive) {
-        finalSystemPrompt = `${finalSystemPrompt}${authorStyleStore.stylePrompt}`;
-      }
+      finalSystemPrompt = applyStyleOverlays(finalSystemPrompt);
 
       // 构建完整消息列表
       const allMessages: ChatMessage[] = [
@@ -419,18 +412,51 @@ export const useAIStore = defineStore("ai", () => {
   }
 
   /**
+   * 组装「题材模板 + 名家笔法」叠加层。
+   * 创作类调用共用（sendMessage / silentCall with useStyle），保证各条生成路径的文风一致。
+   * 注意：只拼 prompt，不改温度（温度由调用方自行决定）。
+   */
+  function applyStyleOverlays(base: string): string {
+    let prompt = base;
+    const templateStore = useTemplateStore();
+    if (templateStore.activeTemplate) {
+      const t = templateStore.activeTemplate;
+      prompt = `${prompt}\n\n【题材风格指引：${t.emoji} ${t.name}】\n${t.stylePrompt}\n- 角色命名：${t.namingStyle}\n- 节奏建议：${t.paceAdvice}\n请严格遵循以上题材风格进行创作。`;
+    }
+    const authorStyleStore = useAuthorStyleStore();
+    if (authorStyleStore.hasActive) {
+      // 名家笔法：只借鉴技法（叙事/语言/节奏），禁止沿用其专有名词与原文
+      prompt = `${prompt}${authorStyleStore.stylePrompt}`;
+    }
+    return prompt;
+  }
+
+  /**
    * 静默调用 AI（非流式）：不写入聊天记录、不更新流式草稿、不触发中间编辑器预览。
    * 用于人设校验等后台任务，避免打断/污染主流程。
+   *
+   * opts.useStyle=true 时，会为第一条 system 消息注入「题材模板 + 名家笔法」，
+   * 适用于分批续写、AI 润色等**创作类**调用；默认 false，避免污染
+   * 人设校验 / 章节记忆摘要 / 元信息回填等结构化输出任务。
    */
   async function silentCall(
     messages: ChatMessage[],
-    opts: { temperature?: number; maxTokens?: number; topP?: number } = {}
+    opts: { temperature?: number; maxTokens?: number; topP?: number; useStyle?: boolean } = {}
   ): Promise<string> {
+    let finalMessages = messages;
+    if (opts.useStyle) {
+      const idx = messages.findIndex((m) => m.role === "system");
+      if (idx >= 0) {
+        finalMessages = messages.map((m, i) =>
+          i === idx ? { ...m, content: applyStyleOverlays(m.content) } : m
+        );
+      }
+    }
     const result = await invoke<AIResponse>("call_ai", {
       baseUrl: resolvedBaseUrl.value,
       apiKey: resolvedApiKey.value,
       model: resolvedModelName.value,
-      messages,
+      messages: finalMessages,
       temperature: opts.temperature ?? temperature.value,
       topP: opts.topP ?? topP.value,
       maxTokens: opts.maxTokens ?? resolvedMaxTokens.value,

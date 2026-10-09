@@ -665,7 +665,8 @@ async function handleAI(action: string) {
   aiProcessing.value = action; // 浮栏显示「AI 正在…」，直到处理结束
   try {
     // 用 silentCall：只发送选中的这段文字，不携带聊天历史 / 全书上下文，不写入聊天
-    const response = await aiStore.silentCall(messages, { temperature: 0.4 });
+    // useStyle：注入题材模板 + 名家笔法，让润色/改写后的文风与全书保持一致
+    const response = await aiStore.silentCall(messages, { temperature: 0.4, useStyle: true });
     // 用 AI 结果替换编辑器中的选中区域，不覆盖整章
     replaceEditorSelection(response, selRange);
     ElMessage.success("已应用 AI 修改");
