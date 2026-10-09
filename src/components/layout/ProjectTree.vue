@@ -126,6 +126,10 @@
               <el-icon><Icon icon="lucide:layout-template" /></el-icon>
               <span>题材模板</span>
             </el-menu-item>
+            <el-menu-item :index="`${proj.id}:__author_style__`">
+              <el-icon><Icon icon="lucide:pen-tool" /></el-icon>
+              <span>名家笔法</span>
+            </el-menu-item>
           </el-sub-menu>
 
           <!-- 章节列表（收纳进可折叠「章节」文件夹，避免上千章平铺太散） -->
@@ -239,6 +243,9 @@
     <!-- 题材模板对话框 -->
     <TemplateSelector v-model:visible="showTemplates" />
 
+    <!-- 名家笔法对话框 -->
+    <AuthorStyleSelector v-model:visible="showAuthorStyle" />
+
     <!-- 世界观对话框 -->
     <el-dialog v-model="showWorld" title="世界观设定" width="650px" destroy-on-close>
       <WorldSetting
@@ -267,6 +274,7 @@ import SearchDialog from "@/components/novel/SearchDialog.vue";
 import NovelQA from "@/components/novel/NovelQA.vue";
 import NovelInfoDialog from "@/components/novel/NovelInfoDialog.vue";
 import TemplateSelector from "@/components/novel/TemplateSelector.vue";
+import AuthorStyleSelector from "@/components/novel/AuthorStyleSelector.vue";
 
 defineEmits<{
   createProject: [];
@@ -282,6 +290,7 @@ const showSearch = ref(false);
 const showQA = ref(false);
 const showNovelInfo = ref(false);
 const showTemplates = ref(false);
+const showAuthorStyle = ref(false);
 
 const projectStore = useProjectStore();
 const editorStore = useEditorStore();
@@ -487,6 +496,7 @@ async function handleSelect(index: string) {
   if (key === "__qa__") { await ensureOpen(projectId); showQA.value = true; return; }
   if (key === "__novel_info__") { await ensureOpen(projectId); showNovelInfo.value = true; return; }
   if (key === "__templates__") { await ensureOpen(projectId); showTemplates.value = true; return; }
+  if (key === "__author_style__") { await ensureOpen(projectId); showAuthorStyle.value = true; return; }
 
   // 打开章节
   await ensureOpen(projectId);

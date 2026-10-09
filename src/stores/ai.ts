@@ -4,6 +4,7 @@ import { invoke, Channel } from "@tauri-apps/api/core";
 import type { ChatMessage, AIResponse, MemorySummary, DeepSeekVariant } from "@/types";
 import { DEEPSEEK_PRESETS } from "@/types";
 import { useTemplateStore } from "@/stores/templates";
+import { useAuthorStyleStore } from "@/stores/authorStyle";
 
 const CONFIG_KEY = "novel-ai-config";
 
@@ -290,6 +291,12 @@ export const useAIStore = defineStore("ai", () => {
         finalSystemPrompt = `${finalSystemPrompt}\n\n【题材风格指引：${t.emoji} ${t.name}】\n${t.stylePrompt}\n- 角色命名：${t.namingStyle}\n- 节奏建议：${t.paceAdvice}\n请严格遵循以上题材风格进行创作。`;
         // 未指定场景时，使用模板推荐温度
         finalTemperature = t.temperature;
+      }
+
+      // 注入名家笔法（若已选择）：只借鉴技法特征（叙事/语言/节奏），禁止沿用其专有名词与原文
+      const authorStyleStore = useAuthorStyleStore();
+      if (authorStyleStore.hasActive) {
+        finalSystemPrompt = `${finalSystemPrompt}${authorStyleStore.stylePrompt}`;
       }
 
       // 构建完整消息列表
