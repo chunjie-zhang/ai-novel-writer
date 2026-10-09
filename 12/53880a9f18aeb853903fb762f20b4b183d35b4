@@ -1,0 +1,49 @@
+src/components/layout/ProjectTree.vue
+  s_c0c7847db2b4e7::t_6a0e650fffd45e 246-248
+  s_c0c7847db2b4e7::t_647ae6b4457952 129-132
+  s_c0c7847db2b4e7::t_795aa5ec1e7b65 277
+  s_c0c7847db2b4e7::t_91d16eb0be1ed9 293
+  s_c0c7847db2b4e7::t_1379811bded605 499
+src/components/novel/AuthorStyleSelector.vue
+  s_c0c7847db2b4e7::t_f3dcd481b9d0c7 1-256
+src/stores/ai.ts
+  s_c0c7847db2b4e7::t_421f911e466212 296-301
+  s_c0c7847db2b4e7::t_835a52c7137a02 7
+README.md
+  s_c0c7847db2b4e7::t_163fd33358f48f 101
+src/data/authorStyles.ts
+  s_c0c7847db2b4e7::t_1da3431c3fbeb5 65
+  s_c0c7847db2b4e7::t_37591c3d4c0431 1-37,39-43,45-60,62-64,66-111,113-130,132-139,141-145,147-156,158-166,168-196,198-230
+  s_c0c7847db2b4e7::t_e1cac33d51e9a7 38
+  s_c0c7847db2b4e7::t_fcecf1a5576d17 61
+  s_c0c7847db2b4e7::t_9296751c196470 140
+  s_c0c7847db2b4e7::t_d33b2b4703ef9e 146
+  s_c0c7847db2b4e7::t_de000e3aafa3f7 157
+  s_c0c7847db2b4e7::t_f24da2bbc57f89 197
+  s_c0c7847db2b4e7::t_3c7faf2e3adf58 131
+  s_c0c7847db2b4e7::t_fca7ab291bb0f8 44
+  s_c0c7847db2b4e7::t_76666c4630bc91 112
+  s_c0c7847db2b4e7::t_dcd170fbe583cd 167
+docs/使用手册.md
+  s_c0c7847db2b4e7::t_ba38b35dbff6d0 81
+  s_c0c7847db2b4e7::t_b523eae162c681 581
+  s_c0c7847db2b4e7::t_b9625fbab5b140 491-500
+src/stores/authorStyle.ts
+  s_c0c7847db2b4e7::t_e196a94416ed90 1-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.7",
+  "base_commit_sha": "1253880a9f18aeb853903fb762f20b4b183d35b4",
+  "prompts": {},
+  "sessions": {
+    "s_c0c7847db2b4e7": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "ad4b3876-042e-4d73-8f93-c5ae7cc9cff5",
+        "model": "gpt-4.1"
+      },
+      "human_author": "zhangchunjie8 <zhangchunjie8@jd.com>"
+    }
+  }
+}
